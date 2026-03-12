@@ -418,8 +418,8 @@
             let targetFreq = 261.63; 
             
             let matchFrames = 0; 
-            const REQUIRED_FRAMES = 15; // 稍微調快判定速度，體驗更俐落
-            const CENTS_TOLERANCE = 35; // 容錯度微調
+            const REQUIRED_FRAMES = 15; 
+            const CENTS_TOLERANCE = 35; 
             let smoothedPosition = 50; 
 
             function midiToNoteName(midi) {
@@ -458,28 +458,54 @@
                 }
             }
 
+            // --- 核心更新：合成「鋼琴/鐵琴」音色 ---
+            function createPianoSound(freq, startTime, duration) {
+                // 主音色使用稍微豐富的三角波
+                const osc1 = audioContext.createOscillator();
+                osc1.type = 'triangle';
+                osc1.frequency.value = freq;
+
+                // 疊加一個高八度的正弦波作為泛音，讓音高更立體、更好抓
+                const osc2 = audioContext.createOscillator();
+                osc2.type = 'sine';
+                osc2.frequency.value = freq * 2; 
+
+                // 總音量控制器 (用來做鋼琴的敲擊衰減效果 ADSR)
+                const gainNode = audioContext.createGain();
+                
+                // 模擬琴槌敲擊 (快速漸強到最大聲)
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(1, startTime + 0.02);
+                
+                // 模擬琴弦聲音自然衰減 (快速弱化後慢慢消失)
+                gainNode.gain.exponentialRampToValueAtTime(0.2, startTime + 0.3);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+                // 調整兩個波形的混合比例
+                const osc1Gain = audioContext.createGain();
+                osc1Gain.gain.value = 0.8; // 主音較大聲
+                const osc2Gain = audioContext.createGain();
+                osc2Gain.gain.value = 0.2; // 泛音當作點綴
+
+                osc1.connect(osc1Gain);
+                osc2.connect(osc2Gain);
+                osc1Gain.connect(gainNode);
+                osc2Gain.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                osc1.start(startTime);
+                osc2.start(startTime);
+                osc1.stop(startTime + duration);
+                osc2.stop(startTime + duration);
+            }
+
             function playSingleNote(midi) {
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
-
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.type = 'sine'; 
-                oscillator.frequency.value = midiToFreq(midi); 
                 
                 const now = audioContext.currentTime;
-                const duration = 1.0; 
-                
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(1, now + 0.05); 
-                gainNode.gain.setValueAtTime(1, now + duration - 0.2); 
-                gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration); 
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                oscillator.start(now);
-                oscillator.stop(now + duration);
+                // 呼叫全新的鋼琴合成音色 (播放 1.5 秒讓聲音完整衰減)
+                createPianoSound(midiToFreq(midi), now, 1.5);
             }
 
             function generateSequence() {
@@ -561,26 +587,12 @@
                 
                 let startTime = audioContext.currentTime;
                 const noteDuration = 1.0; 
-                const gapDuration = 0.5;  
+                const gapDuration = 0.2;  
                 
                 currentSequence.forEach((midi, index) => {
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.type = 'sine'; 
-                    oscillator.frequency.value = midiToFreq(midi); 
-                    
                     let playTime = startTime + (index * (noteDuration + gapDuration));
-                    
-                    gainNode.gain.setValueAtTime(0, playTime);
-                    gainNode.gain.linearRampToValueAtTime(1, playTime + 0.05); 
-                    gainNode.gain.setValueAtTime(1, playTime + noteDuration - 0.2); 
-                    gainNode.gain.exponentialRampToValueAtTime(0.001, playTime + noteDuration); 
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    oscillator.start(playTime);
-                    oscillator.stop(playTime + noteDuration); 
+                    // 使用鋼琴合成音色連續播放
+                    createPianoSound(midiToFreq(midi), playTime, 1.5);
                 });
             });
 
@@ -634,7 +646,6 @@
                     if (currentFreq !== -1) {
                         let centsDiff = 1200 * Math.log2(currentFreq / targetFreq);
                         
-                        // 將游標顯示範圍縮小（視覺上不要跑得太極端）
                         let targetPosition = 50 + (centsDiff / 1.5); 
                         targetPosition = Math.max(5, Math.min(95, targetPosition));
 
@@ -677,7 +688,6 @@
                 }
             }
 
-            // --- 核心更新：加入拋物線插值 (Parabolic Interpolation) ---
             function autoCorrelate(buf, sampleRate) {
                 let SIZE = buf.length;
                 let r1 = 0, r2 = SIZE - 1, thres = 0.2;
@@ -695,7 +705,6 @@
                 
                 let T0 = maxpos;
 
-                // 拋物線插值，計算小數點後的精確波長，解決高音計算偏低的問題
                 if (maxpos > 0 && maxpos < SIZE - 1) {
                     let y1 = c[maxpos - 1], y2 = c[maxpos], y3 = c[maxpos + 1];
                     let a = (y1 + y3 - 2 * y2) / 2;
