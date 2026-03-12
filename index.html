@@ -22,7 +22,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            height: 100dvh; /* 適應平板真實高度 */
+            height: 100dvh; 
             overflow: hidden; 
         }
 
@@ -33,16 +33,17 @@
             padding: 20px 30px;
             background-color: var(--panel-bg);
             box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            flex-wrap: wrap; /* 讓元素在小螢幕時自動換行 */
         }
 
-        .range-selector {
+        .header-group {
             display: flex;
-            gap: 15px;
             align-items: center;
-            font-size: 1.2rem;
+            gap: 15px;
+            font-size: 1.1rem;
         }
 
-        select {
+        select, input[type="number"] {
             padding: 5px 10px;
             font-size: 1.1rem;
             border-radius: 5px;
@@ -50,7 +51,12 @@
             background-color: #2a2a2a;
             color: white;
             cursor: pointer;
+            text-align: center;
         }
+
+        /* 隱藏數字輸入框的上下箭頭 */
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        input[type="number"] { width: 60px; -moz-appearance: textfield; }
 
         .mic-status {
             font-size: 0.9rem;
@@ -68,7 +74,6 @@
             display: inline-block;
         }
 
-        /* 新增：音量條的視覺設計 */
         .volume-bar-container {
             width: 60px;
             height: 8px;
@@ -81,7 +86,7 @@
 
         .volume-bar-fill {
             height: 100%;
-            width: 0%; /* 由 JS 控制寬度 */
+            width: 0%; 
             background-color: var(--accent-color);
             transition: width 0.1s ease-out;
         }
@@ -132,13 +137,14 @@
             background-color: var(--warning-color);
             border-radius: 50%;
             transform: translateY(50%); 
-            transition: bottom 0.1s ease-out, background-color 0.3s;
+            /* 將動畫過渡時間拉長，增加視覺平滑感 */
+            transition: bottom 0.15s linear, background-color 0.3s;
             box-shadow: 0 0 15px var(--warning-color);
-            opacity: 0.2; /* 沒聲音時變半透明 */
+            opacity: 0.2; 
         }
 
         .user-pitch-cursor.active {
-            opacity: 1; /* 有聲音時亮起 */
+            opacity: 1; 
         }
 
         .user-pitch-cursor.perfect {
@@ -187,6 +193,7 @@
                 flex-direction: column; 
                 gap: 15px;
             }
+            .header-group { flex-wrap: wrap; justify-content: center; }
             .target-note { font-size: 6rem; }
             .pitch-visualizer { height: 220px; }
             footer { padding: 15px; }
@@ -197,7 +204,7 @@
 <body>
 
     <header>
-        <div class="range-selector">
+        <div class="header-group">
             <label>音域範圍：</label>
             <select id="min-note">
                 <option value="55" selected>g</option>
@@ -212,6 +219,13 @@
                 <option value="76" selected>e2</option>
             </select>
         </div>
+        
+        <div class="header-group">
+            <label>基準音 A4 = </label>
+            <input type="number" id="a4-input" value="440" min="415" max="460">
+            <span>Hz</span>
+        </div>
+
         <div class="mic-status">
             <span class="mic-icon" id="mic-indicator"></span>
             <span id="mic-text">未連線</span>
@@ -245,6 +259,7 @@
         
         const minNoteSelect = document.getElementById('min-note');
         const maxNoteSelect = document.getElementById('max-note');
+        const a4Input = document.getElementById('a4-input');
         
         let audioContext;
         let analyser;
@@ -252,48 +267,54 @@
         let isDetecting = false;
         
         let targetMidi = 60; 
-        let targetFreq = 261.63; // c1 頻率
+        let targetFreq = 261.63; 
         let matchFrames = 0; 
-        const REQUIRED_FRAMES = 25; 
-        const CENTS_TOLERANCE = 30; // 稍微放寬容錯度，讓平板更好抓
+        const REQUIRED_FRAMES = 20; 
+        const CENTS_TOLERANCE = 30; 
 
+        // 平滑化變數 (紀錄游標當前位置，預設在中間 50%)
+        let smoothedPosition = 50; 
+
+        // 改寫公式：動態讀取畫面上設定的 A4 基準頻率 (預設440)
         function midiToFreq(midi) {
-            return 440 * Math.pow(2, (midi - 69) / 12);
+            const a4Freq = parseFloat(a4Input.value) || 440;
+            return a4Freq * Math.pow(2, (midi - 69) / 12);
         }
 
-        // 將 MIDI 轉換為絕對音名 (小字組、小字一組、小字二組)
         function midiToNoteName(midi) {
             const noteNames = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
             const octave = Math.floor(midi / 12) - 1; 
             const noteName = noteNames[midi % 12];
             
-            if (octave === 3) return noteName; // 小字組 (g, a, b)
-            if (octave === 4) return noteName + '1'; // 小字一組 (c1, d1...)
-            if (octave === 5) return noteName + '2'; // 小字二組 (c2, d2...)
+            if (octave === 3) return noteName; 
+            if (octave === 4) return noteName + '1'; 
+            if (octave === 5) return noteName + '2'; 
             return `${noteName}${octave}`; 
         }
 
         function generateNewNote() {
-            // 讀取下拉選單的值
             const minMidi = parseInt(minNoteSelect.value);
             const maxMidi = parseInt(maxNoteSelect.value);
-            
-            // 確保最小值不大於最大值
             const min = Math.min(minMidi, maxMidi);
             const max = Math.max(minMidi, maxMidi);
 
-            // 在選定範圍內隨機出題
             targetMidi = Math.floor(Math.random() * (max - min + 1)) + min;
             targetFreq = midiToFreq(targetMidi);
             currentNoteDisplay.textContent = midiToNoteName(targetMidi);
             
             pitchCursor.classList.remove('perfect');
             matchFrames = 0;
+            smoothedPosition = 50; // 換題時游標歸位
+            pitchCursor.style.bottom = '50%';
         }
 
-        // 當下拉選單改變時，重出一次題目
         minNoteSelect.addEventListener('change', generateNewNote);
         maxNoteSelect.addEventListener('change', generateNewNote);
+        
+        // 當基準音 A4 改變時，立刻重新計算當前題目的目標頻率
+        a4Input.addEventListener('change', () => {
+            targetFreq = midiToFreq(targetMidi);
+        });
 
         playBtn.addEventListener('click', () => {
             if (!audioContext) initAudio();
@@ -324,7 +345,7 @@
                 if (!audioContext) initAudio();
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
-                }); // 關閉平板內建的降噪，避免人聲被當成雜音濾掉
+                }); 
                 
                 micIndicator.style.backgroundColor = 'green';
                 micText.textContent = '已連線';
@@ -346,30 +367,33 @@
             if (!isDetecting) return;
             analyser.getFloatTimeDomainData(buffer);
             
-            // 計算音量 (RMS) 並更新右上角的音量條
             let rms = 0;
             for (let i = 0; i < buffer.length; i++) {
                 rms += buffer[i] * buffer[i];
             }
             rms = Math.sqrt(rms / buffer.length);
             
-            // 將音量轉換為 0~100% (放大數值讓視覺更明顯)
             let volumePercent = Math.min(100, rms * 100 * 5);
             volumeLevel.style.width = volumePercent + '%';
 
-            // 判斷是否有發出足夠的聲音
-            if (rms > 0.005) { // 降低門檻，讓平板更容易收到聲音
+            if (rms > 0.005) { 
                 pitchCursor.classList.add('active');
                 let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
                 
                 if (currentFreq !== -1) {
                     let centsDiff = 1200 * Math.log2(currentFreq / targetFreq);
-                    let cursorPosition = 50 + (centsDiff / 2); 
-                    
-                    cursorPosition = Math.max(0, Math.min(100, cursorPosition));
-                    pitchCursor.style.bottom = `${cursorPosition}%`;
+                    let targetPosition = 50 + (centsDiff / 2); 
+                    targetPosition = Math.max(0, Math.min(100, targetPosition));
 
-                    if (Math.abs(centsDiff) < CENTS_TOLERANCE) {
+                    // --- 關鍵修改：加入平滑化演算法 ---
+                    // 0.85 的慣性加上 0.15 的新數值，讓游標移動變得柔和不抽搐
+                    smoothedPosition = (smoothedPosition * 0.85) + (targetPosition * 0.15);
+                    pitchCursor.style.bottom = `${smoothedPosition}%`;
+
+                    // 用平滑後的數值來判斷是否過關，減少因為瞬間氣流不穩造成的判定中斷
+                    let smoothedCentsDiff = (smoothedPosition - 50) * 2;
+
+                    if (Math.abs(smoothedCentsDiff) < CENTS_TOLERANCE) {
                         matchFrames++;
                         if (matchFrames > REQUIRED_FRAMES) {
                             pitchCursor.classList.add('perfect');
@@ -383,10 +407,12 @@
                     }
                 }
             } else {
-                // 如果沒有發出聲音，游標變回半透明且回到中間
                 pitchCursor.classList.remove('active');
                 pitchCursor.classList.remove('perfect');
                 matchFrames = 0;
+                // 沒聲音時，讓游標慢慢滑回中央，而不是瞬間跳回去
+                smoothedPosition = (smoothedPosition * 0.9) + (50 * 0.1);
+                pitchCursor.style.bottom = `${smoothedPosition}%`;
             }
             
             requestAnimationFrame(updatePitch);
