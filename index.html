@@ -28,7 +28,6 @@
             overflow: hidden; 
         }
 
-        /* --- 頂部控制區 --- */
         header {
             display: flex;
             justify-content: center;
@@ -92,11 +91,10 @@
             transition: width 0.05s ease-out;
         }
 
-        /* --- 主畫面區 --- */
         main {
             flex: 1;
             display: flex;
-            flex-direction: row; /* 左邊題目，右邊儀表板 */
+            flex-direction: row; 
             justify-content: center;
             align-items: center;
             position: relative;
@@ -104,7 +102,6 @@
             padding: 20px;
         }
 
-        /* 音高階梯圖表區 */
         .sequence-container {
             position: relative;
             width: 300px;
@@ -119,7 +116,6 @@
             box-sizing: border-box;
         }
 
-        /* 背景參考線 */
         .grid-line {
             position: absolute;
             width: 100%;
@@ -128,7 +124,6 @@
             z-index: 0;
         }
 
-        /* 每一顆音符圓點 */
         .note-dot-wrapper {
             position: relative;
             width: 50px;
@@ -153,11 +148,10 @@
             font-weight: bold;
             color: rgba(255,255,255,0.5);
             transition: all 0.3s;
-            transform: translateY(50%); /* 置中對齊高度 */
+            transform: translateY(50%); 
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        /* 當前需要唱的音 */
         .note-dot.active {
             background-color: var(--active-dot-color);
             color: #000;
@@ -166,7 +160,6 @@
             border: 3px solid #fff;
         }
 
-        /* 已經唱準過關的音 */
         .note-dot.done {
             background-color: var(--accent-color);
             color: #fff;
@@ -174,7 +167,6 @@
             box-shadow: 0 0 15px var(--accent-color);
         }
 
-        /* 右側音準儀表板 */
         .pitch-visualizer {
             position: relative;
             width: 60px;
@@ -217,7 +209,6 @@
             transform: translateY(50%) scale(1.2);
         }
 
-        /* --- 過關慶祝畫面 --- */
         .success-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -231,10 +222,7 @@
             pointer-events: none;
             transition: opacity 0.5s;
         }
-        .success-overlay.show {
-            opacity: 1;
-            pointer-events: all;
-        }
+        .success-overlay.show { opacity: 1; pointer-events: all; }
         .success-overlay h1 {
             font-size: 5rem;
             color: #FFEB3B;
@@ -313,13 +301,11 @@
             <div class="grid-line" style="bottom: 25%"></div>
             <div class="grid-line" style="bottom: 50%"></div>
             <div class="grid-line" style="bottom: 75%"></div>
-            </div>
-
+        </div>
         <div class="pitch-visualizer">
             <div class="target-line"></div>
             <div class="user-pitch-cursor" id="pitch-cursor"></div>
         </div>
-
         <div class="success-overlay" id="success-overlay">
             <h1>🎉 恭喜過關！🎉</h1>
             <button class="btn-massive" id="next-seq-btn">下一題 ➔</button>
@@ -352,14 +338,13 @@
             let isDetecting = false;
             let isSequenceComplete = false;
             
-            // 闖關狀態變數
-            let currentSequence = []; // 儲存當前題目的 MIDI 陣列 (例如: [60, 64, 67])
-            let currentTargetIndex = 0; // 目前要唱陣列裡的第幾個音
+            let currentSequence = []; 
+            let currentTargetIndex = 0; 
             let targetFreq = 261.63; 
             
             let matchFrames = 0; 
-            const REQUIRED_FRAMES = 20; // 穩定時間
-            const CENTS_TOLERANCE = 30; // 容錯音分
+            const REQUIRED_FRAMES = 20; 
+            const CENTS_TOLERANCE = 30; 
             let smoothedPosition = 50; 
             const isMobile = window.innerWidth <= 820;
 
@@ -381,8 +366,8 @@
                 }
                 minNoteSelect.innerHTML = optionsHtml;
                 maxNoteSelect.innerHTML = optionsHtml;
-                minNoteSelect.value = "60"; // 預設 c1
-                maxNoteSelect.value = "72"; // 預設 c2
+                minNoteSelect.value = "60"; 
+                maxNoteSelect.value = "72"; 
             }
 
             function midiToFreq(midi) {
@@ -390,10 +375,9 @@
                 return a4Freq * Math.pow(2, (midi - 69) / 12);
             }
 
-            // 產生新的一組題目
             function generateSequence() {
                 successOverlay.classList.remove('show');
-                isSequenceComplete = false;
+                isSequenceComplete = false; // 重置過關狀態
                 
                 const minMidi = parseInt(minNoteSelect.value);
                 const maxMidi = parseInt(maxNoteSelect.value);
@@ -402,22 +386,18 @@
                 const count = parseInt(noteCountSelect.value);
 
                 currentSequence = [];
-                // 刪除舊的圓點 (保留背景線)
                 const dots = sequenceDisplay.querySelectorAll('.note-dot-wrapper');
                 dots.forEach(dot => dot.remove());
 
                 for (let i = 0; i < count; i++) {
-                    // 產生亂數音高
                     let noteMidi = Math.floor(Math.random() * (max - min + 1)) + min;
                     currentSequence.push(noteMidi);
 
-                    // 計算在圖表中的垂直高度比例 (0% ~ 100%)
                     let heightPercent = 50;
                     if (max > min) {
                         heightPercent = ((noteMidi - min) / (max - min)) * 100;
                     }
 
-                    // 建立 DOM 元素
                     let wrapper = document.createElement('div');
                     wrapper.className = 'note-dot-wrapper';
                     
@@ -431,27 +411,24 @@
                     sequenceDisplay.appendChild(wrapper);
                 }
 
-                // 初始化第一個音
                 currentTargetIndex = 0;
                 setTargetNote(0);
             }
 
-            // 設定當前要偵測的目標音
             function setTargetNote(index) {
                 targetFreq = midiToFreq(currentSequence[index]);
                 matchFrames = 0;
                 
-                // 更新 UI 圓點狀態
                 for (let i = 0; i < currentSequence.length; i++) {
                     let dot = document.getElementById(`dot-${i}`);
                     dot.classList.remove('active');
                     if (i < index) {
-                        dot.classList.add('done'); // 之前的標記為完成
+                        dot.classList.add('done'); 
                     }
                 }
                 
                 if (index < currentSequence.length) {
-                    document.getElementById(`dot-${index}`).classList.add('active'); // 當前的亮起
+                    document.getElementById(`dot-${index}`).classList.add('active'); 
                 }
             }
 
@@ -468,13 +445,13 @@
                 if (micGainNode) micGainNode.gain.value = parseFloat(e.target.value);
             });
 
-            // 播放整個序列的聲音
+            // 【修正2 & 3：聲音變短與變小的問題】
             playBtn.addEventListener('click', () => {
                 if (!audioContext) initAudio();
                 
                 let startTime = audioContext.currentTime;
-                // 每個音播放 1.2 秒，中間間隔 0.1 秒
-                const noteDuration = 1.2; 
+                const noteDuration = 3.0; // 每個音延長為 3 秒
+                const gapDuration = 0.5;  // 音跟音之間空 0.5 秒的呼吸空間
                 
                 currentSequence.forEach((midi, index) => {
                     const oscillator = audioContext.createOscillator();
@@ -483,10 +460,12 @@
                     oscillator.type = 'sine'; 
                     oscillator.frequency.value = midiToFreq(midi); 
                     
-                    let playTime = startTime + (index * (noteDuration + 0.1));
+                    let playTime = startTime + (index * (noteDuration + gapDuration));
                     
+                    // 音量設定：快速漸強 -> 維持最大音量 -> 最後 0.5 秒才漸弱
                     gainNode.gain.setValueAtTime(0, playTime);
-                    gainNode.gain.linearRampToValueAtTime(1, playTime + 0.1);
+                    gainNode.gain.linearRampToValueAtTime(1, playTime + 0.1); 
+                    gainNode.gain.setValueAtTime(1, playTime + noteDuration - 0.5); 
                     gainNode.gain.exponentialRampToValueAtTime(0.001, playTime + noteDuration); 
                     
                     oscillator.connect(gainNode);
@@ -504,7 +483,6 @@
             }
 
             document.body.addEventListener('click', async (e) => {
-                // 如果點擊的是按鈕或選單，就不觸發麥克風要求
                 if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
                 
                 if (micIndicator.style.backgroundColor === 'green') return;
@@ -528,13 +506,17 @@
                     console.error("麥克風錯誤:", err);
                     alert('無法開啟麥克風。請確認權限。');
                 }
-            }); // 這裡不加 {once: true}，因為加了條件判斷
+            });
 
             const buffer = new Float32Array(2048);
 
+            // 【修正1：過關後游標當機不移動的問題】
             function updatePitch() {
-                if (!isDetecting || isSequenceComplete) {
-                    if(!isSequenceComplete) requestAnimationFrame(updatePitch);
+                if (!isDetecting) return;
+
+                // 如果全部過關了，讓迴圈繼續「空轉」等待，而不是切斷它
+                if (isSequenceComplete) {
+                    requestAnimationFrame(updatePitch);
                     return;
                 }
 
@@ -556,7 +538,6 @@
 
                         smoothedPosition = (smoothedPosition * 0.85) + (targetPosition * 0.15);
                         
-                        // 處理手機直式排版 (左/右移動) 與 電腦橫式排版 (上/下移動)
                         if (isMobile) {
                             pitchCursor.style.left = `${smoothedPosition}%`;
                             pitchCursor.style.bottom = '0';
@@ -572,25 +553,21 @@
                             if (matchFrames > REQUIRED_FRAMES) {
                                 pitchCursor.classList.add('perfect');
                                 
-                                // 這個音過關了！前往下一個音
                                 currentTargetIndex++;
                                 
                                 if (currentTargetIndex >= currentSequence.length) {
-                                    // 全部過關！
                                     isSequenceComplete = true;
                                     document.getElementById(`dot-${currentTargetIndex-1}`).classList.add('done');
                                     document.getElementById(`dot-${currentTargetIndex-1}`).classList.remove('active');
                                     successOverlay.classList.add('show');
                                 } else {
-                                    // 還有下一個音，給予 0.5 秒的緩衝時間換氣
+                                    // 還沒結束，只是進入下一個音，給 0.5 秒緩衝時間
                                     isDetecting = false;
                                     setTimeout(() => {
                                         setTargetNote(currentTargetIndex);
                                         pitchCursor.classList.remove('perfect');
                                         isDetecting = true;
-                                        updatePitch(); // 重新啟動偵測迴圈
                                     }, 500);
-                                    return; // 暫停當前的迴圈
                                 }
                             }
                         } else {
