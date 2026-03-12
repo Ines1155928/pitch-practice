@@ -458,45 +458,22 @@
                 }
             }
 
-            // --- 核心更新：合成「鋼琴/鐵琴」音色 ---
-            function createPianoSound(freq, startTime, duration) {
-                // 主音色使用稍微豐富的三角波
-                const osc1 = audioContext.createOscillator();
-                osc1.type = 'triangle';
-                osc1.frequency.value = freq;
-
-                // 疊加一個高八度的正弦波作為泛音，讓音高更立體、更好抓
-                const osc2 = audioContext.createOscillator();
-                osc2.type = 'sine';
-                osc2.frequency.value = freq * 2; 
-
-                // 總音量控制器 (用來做鋼琴的敲擊衰減效果 ADSR)
+            // --- 替換為使用者指定的純淨正弦波音色 ---
+            function playSimpleTone(freq, startTime, duration) {
+                const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
-                // 模擬琴槌敲擊 (快速漸強到最大聲)
-                gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.linearRampToValueAtTime(1, startTime + 0.02);
-                
-                // 模擬琴弦聲音自然衰減 (快速弱化後慢慢消失)
-                gainNode.gain.exponentialRampToValueAtTime(0.2, startTime + 0.3);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-                // 調整兩個波形的混合比例
-                const osc1Gain = audioContext.createGain();
-                osc1Gain.gain.value = 0.8; // 主音較大聲
-                const osc2Gain = audioContext.createGain();
-                osc2Gain.gain.value = 0.2; // 泛音當作點綴
-
-                osc1.connect(osc1Gain);
-                osc2.connect(osc2Gain);
-                osc1Gain.connect(gainNode);
-                osc2Gain.connect(gainNode);
+                oscillator.type = 'sine'; // 純粹的正弦波
+                oscillator.frequency.value = freq;
+                oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
-
-                osc1.start(startTime);
-                osc2.start(startTime);
-                osc1.stop(startTime + duration);
-                osc2.stop(startTime + duration);
+                
+                // 完全套用你提供的溫和音量衰減公式
+                gainNode.gain.setValueAtTime(0.3, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration);
             }
 
             function playSingleNote(midi) {
@@ -504,8 +481,8 @@
                 if (audioContext.state === 'suspended') audioContext.resume();
                 
                 const now = audioContext.currentTime;
-                // 呼叫全新的鋼琴合成音色 (播放 1.5 秒讓聲音完整衰減)
-                createPianoSound(midiToFreq(midi), now, 1.5);
+                // 點擊單顆圓點播放 1 秒
+                playSimpleTone(midiToFreq(midi), now, 1.0);
             }
 
             function generateSequence() {
@@ -591,8 +568,8 @@
                 
                 currentSequence.forEach((midi, index) => {
                     let playTime = startTime + (index * (noteDuration + gapDuration));
-                    // 使用鋼琴合成音色連續播放
-                    createPianoSound(midiToFreq(midi), playTime, 1.5);
+                    // 連續播放時也使用指定的純淨音色
+                    playSimpleTone(midiToFreq(midi), playTime, 1.0);
                 });
             });
 
