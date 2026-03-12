@@ -22,8 +22,10 @@
             color: var(--text-color);
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            overflow: hidden; /* 防止畫面滾動，讓使用者專注 */
+            /* 將 100vh 改成 100dvh，解決平板底部被吃掉的問題 */
+            height: 100vh; /* 給舊瀏覽器的備案 */
+            height: 100dvh; /* 現代平板/手機的動態高度 */
+            overflow: hidden; 
         }
 
         /* --- 頂部控制區 --- */
@@ -169,6 +171,7 @@
         .btn-next:hover {
             border-color: white;
         }
+
     </style>
 </head>
 <body>
@@ -207,59 +210,189 @@
         <button class="btn-play" id="play-btn">🎵 播放示範音</button>
         <button class="btn-next" id="next-btn">下一題 ➔</button>
     </footer>
-
+/* --- 平板與手機的響應式設計 (RWD) --- */
+        @media (max-width: 820px) {
+            header {
+                padding: 15px 20px;
+                flex-direction: column; /* 讓頂部選單上下排列，節省空間 */
+                gap: 15px;
+            }
+            .target-note {
+                font-size: 5.5rem; /* 字體稍微縮小 */
+                margin-bottom: 15px;
+            }
+            .pitch-visualizer {
+                height: 220px; /* 儀表板變短一點 */
+            }
+            footer {
+                padding: 15px;
+            }
+            button {
+                padding: 12px 25px;
+                font-size: 1.2rem; /* 按鈕稍微縮小 */
+            }
+        }
 </body>
 <script>
         const playBtn = document.getElementById('play-btn');
+        const nextBtn = document.getElementById('next-btn');
         const micIndicator = document.getElementById('mic-indicator');
+        const currentNoteDisplay = document.getElementById('current-note');
+        const pitchCursor = document.getElementById('pitch-cursor');
+        
         let audioContext;
+        let analyser;
+        let microphoneStream;
+        let isDetecting = false;
+        
+        // --- 音高設定區 ---
+        let targetMidi = 64; // 預設目標音：E4 (MIDI編號64)
+        let targetFreq = 329.63;
+        let matchFrames = 0; // 用來計算「維持在正確音準」的時間
+        const REQUIRED_FRAMES = 30; // 大約需要穩定 0.5 秒才能過關
+        const CENTS_TOLERANCE = 25; // 容錯範圍：正負 25 音分 (對初學者較友善)
 
-        // --- 1. 播放示範音功能 ---
+        // MIDI 編號轉頻率的公式
+        function midiToFreq(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        // MIDI 編號轉音名 (用來顯示在畫面上)
+        function midiToNoteName(midi) {
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const octave = Math.floor(midi / 12) - 1;
+            const noteName = noteNames[midi % 12];
+            return `${noteName}${octave}`;
+        }
+
+        // 隨機出題功能 (C3=48, G5=79)
+        function generateNewNote() {
+            // 隨機挑選 48 到 79 之間的 MIDI 音符 (範圍之後可以與畫面的下拉選單綁定)
+            targetMidi = Math.floor(Math.random() * (79 - 48 + 1)) + 48;
+            targetFreq = midiToFreq(targetMidi);
+            currentNoteDisplay.textContent = midiToNoteName(targetMidi);
+            
+            // 重置游標狀態
+            pitchCursor.classList.remove('perfect');
+            matchFrames = 0;
+        }
+
+        // --- 1. 播放示範音 ---
         playBtn.addEventListener('click', () => {
-            // 由於瀏覽器安全性限制，AudioContext 必須在使用者點擊後才能啟動
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            // 建立發聲器 (產生乾淨的正弦波，類似音叉的聲音)
+            if (!audioContext) initAudio();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-
+            
             oscillator.type = 'sine'; 
-            oscillator.frequency.value = 329.63; // 目前先固定播放 E4 的頻率 (329.63 Hz) 測試
-
-            // 設定音量漸弱，避免聲音突然斷掉產生爆音
+            oscillator.frequency.value = targetFreq; 
+            
             gainNode.gain.setValueAtTime(1, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
-
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 3.0); // 3秒長度
+            
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-
             oscillator.start();
-            oscillator.stop(audioContext.currentTime + 1.5); // 播放 1.5 秒
+            oscillator.stop(audioContext.currentTime + 3.0); 
         });
 
-        // --- 2. 請求麥克風權限功能 ---
-        // 我們設定在使用者「第一次點擊網頁任何地方」時，自動跳出麥克風授權視窗
-        document.body.addEventListener('click', async () => {
-            // 如果右上角已經是綠燈，代表已連線，就不重複執行
-            if (micIndicator.style.backgroundColor === 'green') return;
+        // --- 2. 啟動麥克風與分析器 ---
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+        }
 
+        document.body.addEventListener('click', async () => {
+            if (micIndicator.style.backgroundColor === 'green') return;
             try {
-                // 向裝置請求麥克風權限
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                // 使用者按了「允許」！改變右上角的狀態顯示
+                if (!audioContext) initAudio();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
                 micIndicator.style.backgroundColor = 'green';
                 micIndicator.nextSibling.textContent = ' 麥克風已連線';
                 
-                // 這裡保留 stream，之後會把這個聲音資料丟給音高偵測演算法
-                window.localStream = stream; 
-
+                microphoneStream = audioContext.createMediaStreamSource(stream);
+                microphoneStream.connect(analyser);
+                
+                isDetecting = true;
+                updatePitch(); // 開始持續偵測音高
             } catch (err) {
-                // 使用者按了「拒絕」或發生錯誤
-                alert('請允許瀏覽器使用麥克風，這樣才能偵測你唱的音準喔！若不小心按到拒絕，請重新整理網頁。');
+                console.error(err);
+                alert('請允許使用麥克風才能練習喔！');
             }
-        }, { once: true }); // { once: true } 確保這個全域點擊事件只會觸發一次
+        }, { once: true });
+
+        // --- 3. 核心：音高偵測與畫面更新 ---
+        const buffer = new Float32Array(2048);
+
+        function updatePitch() {
+            if (!isDetecting) return;
+            analyser.getFloatTimeDomainData(buffer);
+            let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
+            
+            if (currentFreq !== -1) {
+                // 計算你唱的音跟目標音差多少「音分」(cents)。1個半音 = 100音分
+                let centsDiff = 1200 * Math.log2(currentFreq / targetFreq);
+                
+                // 計算游標位置 (0% ~ 100%)。設定上下範圍為正負 100 音分 (大約一個半音的寬容度)
+                let cursorPosition = 50 + (centsDiff / 2); 
+                
+                // 限制游標不要跑出儀表板外
+                cursorPosition = Math.max(0, Math.min(100, cursorPosition));
+                pitchCursor.style.bottom = `${cursorPosition}%`;
+
+                // 判斷是否在「完美音準」範圍內
+                if (Math.abs(centsDiff) < CENTS_TOLERANCE) {
+                    matchFrames++;
+                    if (matchFrames > REQUIRED_FRAMES) {
+                        pitchCursor.classList.add('perfect');
+                        // 過關！延遲 1.5 秒後自動換下一題
+                        setTimeout(() => {
+                            generateNewNote();
+                        }, 1500);
+                    }
+                } else {
+                    // 如果音準跑掉，重置累積時間
+                    pitchCursor.classList.remove('perfect');
+                    matchFrames = 0;
+                }
+            }
+            // 透過瀏覽器動畫幀持續呼叫自己，形成即時偵測迴圈
+            requestAnimationFrame(updatePitch);
+        }
+
+        // 點擊下一題按鈕手動換題
+        nextBtn.addEventListener('click', generateNewNote);
+
+        // --- 數學演算法：從音波中找出頻率 (Auto-correlation) ---
+        function autoCorrelate(buf, sampleRate) {
+            let SIZE = buf.length;
+            let rms = 0;
+            for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+            rms = Math.sqrt(rms / SIZE);
+            if (rms < 0.01) return -1; // 聲音太小，不偵測
+
+            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+            for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+            for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+
+            buf = buf.slice(r1, r2);
+            SIZE = buf.length;
+
+            let c = new Array(SIZE).fill(0);
+            for (let i = 0; i < SIZE; i++)
+                for (let j = 0; j < SIZE - i; j++)
+                    c[i] = c[i] + buf[j] * buf[j + i];
+
+            let d = 0; while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < SIZE; i++) {
+                if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+            }
+            let T0 = maxpos;
+            return sampleRate / T0;
+        }
+
+        // 初始化產生第一題
+        generateNewNote();
     </script>
 </html>
