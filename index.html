@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動式音準練習</title>
+    <title>互動式音準練習 - 闖關模式</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -11,6 +11,8 @@
             --accent-color: #4CAF50; 
             --warning-color: #FF9800; 
             --panel-bg: #1E1E1E;
+            --dot-color: #555;
+            --active-dot-color: #FFEB3B;
         }
 
         body {
@@ -26,27 +28,29 @@
             overflow: hidden; 
         }
 
+        /* --- 頂部控制區 --- */
         header {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            padding: 20px 30px;
+            padding: 15px 20px;
             background-color: var(--panel-bg);
             box-shadow: 0 2px 10px rgba(0,0,0,0.5);
             flex-wrap: wrap; 
             gap: 15px;
+            z-index: 10;
         }
 
         .header-group {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
+            gap: 8px;
+            font-size: 1rem;
         }
 
         select, input[type="number"] {
-            padding: 5px 10px;
-            font-size: 1.1rem;
+            padding: 5px;
+            font-size: 1rem;
             border-radius: 5px;
             border: 1px solid #333;
             background-color: #2a2a2a;
@@ -56,19 +60,15 @@
         }
 
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-        input[type="number"] { width: 60px; -moz-appearance: textfield; }
-
-        input[type="range"] {
-            width: 100px;
-            cursor: pointer;
-        }
+        input[type="number"] { width: 50px; -moz-appearance: textfield; }
+        input[type="range"] { width: 80px; cursor: pointer; }
 
         .mic-status {
             font-size: 0.9rem;
             color: #888;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
         }
 
         .mic-icon {
@@ -76,19 +76,15 @@
             height: 12px;
             background-color: red; 
             border-radius: 50%;
-            display: inline-block;
         }
 
         .volume-bar-container {
-            width: 80px;
-            height: 10px;
+            width: 60px;
+            height: 8px;
             background-color: #333;
-            border-radius: 5px;
+            border-radius: 4px;
             overflow: hidden;
-            display: inline-block;
-            vertical-align: middle;
         }
-
         .volume-bar-fill {
             height: 100%;
             width: 0%; 
@@ -96,23 +92,89 @@
             transition: width 0.05s ease-out;
         }
 
+        /* --- 主畫面區 --- */
         main {
             flex: 1;
             display: flex;
-            flex-direction: column;
+            flex-direction: row; /* 左邊題目，右邊儀表板 */
             justify-content: center;
             align-items: center;
             position: relative;
+            gap: 40px;
+            padding: 20px;
         }
 
-        .target-note {
-            font-size: 8rem;
+        /* 音高階梯圖表區 */
+        .sequence-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            background-color: rgba(255,255,255,0.02);
+            border-radius: 15px;
+            border: 1px dashed #444;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            padding: 20px 0;
+            box-sizing: border-box;
+        }
+
+        /* 背景參考線 */
+        .grid-line {
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background-color: rgba(255,255,255,0.1);
+            z-index: 0;
+        }
+
+        /* 每一顆音符圓點 */
+        .note-dot-wrapper {
+            position: relative;
+            width: 50px;
+            height: 100%;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .note-dot {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: var(--dot-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
             font-weight: bold;
-            margin-bottom: 20px;
-            letter-spacing: 2px;
-            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.5);
+            transition: all 0.3s;
+            transform: translateY(50%); /* 置中對齊高度 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
+        /* 當前需要唱的音 */
+        .note-dot.active {
+            background-color: var(--active-dot-color);
+            color: #000;
+            transform: translateY(50%) scale(1.2);
+            box-shadow: 0 0 20px var(--active-dot-color);
+            border: 3px solid #fff;
+        }
+
+        /* 已經唱準過關的音 */
+        .note-dot.done {
+            background-color: var(--accent-color);
+            color: #fff;
+            transform: translateY(50%) scale(1);
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        /* 右側音準儀表板 */
         .pitch-visualizer {
             position: relative;
             width: 60px;
@@ -129,9 +191,10 @@
             top: 50%;
             width: 100px; 
             height: 4px;
-            background-color: rgba(255, 255, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.8);
             transform: translateY(-50%);
             border-radius: 2px;
+            z-index: 2;
         }
 
         .user-pitch-cursor {
@@ -145,15 +208,42 @@
             transition: bottom 0.15s linear, background-color 0.3s;
             box-shadow: 0 0 15px var(--warning-color);
             opacity: 0.2; 
+            z-index: 3;
         }
-
         .user-pitch-cursor.active { opacity: 1; }
-
         .user-pitch-cursor.perfect {
             background-color: var(--accent-color);
             box-shadow: 0 0 25px var(--accent-color);
             transform: translateY(50%) scale(1.2);
         }
+
+        /* --- 過關慶祝畫面 --- */
+        .success-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .success-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .success-overlay h1 {
+            font-size: 5rem;
+            color: #FFEB3B;
+            text-shadow: 0 0 30px rgba(255, 235, 59, 0.8);
+            margin-bottom: 40px;
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .success-overlay.show h1 { transform: scale(1); }
 
         footer {
             padding: 20px;
@@ -161,38 +251,31 @@
             justify-content: center;
             gap: 20px;
             background-color: var(--panel-bg);
+            z-index: 10;
         }
 
         button {
-            padding: 15px 40px;
-            font-size: 1.5rem;
+            padding: 15px 30px;
+            font-size: 1.2rem;
             font-weight: bold;
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            transition: transform 0.2s, background-color 0.2s;
+            transition: transform 0.2s;
         }
-
         button:hover { transform: scale(1.05); }
+        .btn-play { background-color: #2196F3; color: white; }
+        .btn-next { background-color: transparent; color: white; border: 2px solid #555; }
+        .btn-massive { padding: 20px 60px; font-size: 2rem; background-color: var(--accent-color); color: white; }
 
-        .btn-play {
-            background-color: #2196F3;
-            color: white;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
-        }
-
-        .btn-next {
-            background-color: transparent;
-            color: white;
-            border: 2px solid #555;
-        }
-        
         @media (max-width: 820px) {
-            header { padding: 15px 10px; justify-content: center; }
-            .header-group { font-size: 1rem; }
-            .target-note { font-size: 6rem; }
-            .pitch-visualizer { height: 220px; }
-            button { padding: 12px 25px; font-size: 1.2rem; }
+            main { flex-direction: column; gap: 20px; }
+            .sequence-container { width: 100%; height: 200px; }
+            .pitch-visualizer { width: 300px; height: 40px; flex-direction: column; align-items: center; border-radius: 20px; }
+            .target-line { top: 0; left: 50%; width: 4px; height: 60px; transform: translateX(-50%); }
+            .user-pitch-cursor { bottom: 0; left: 50%; transform: translateX(-50%); transition: left 0.15s linear; }
+            .user-pitch-cursor.perfect { transform: translateX(-50%) scale(1.2); }
+            .success-overlay h1 { font-size: 3.5rem; }
         }
     </style>
 </head>
@@ -201,76 +284,89 @@
     <header>
         <div class="header-group">
             <label>範圍：</label>
-            <select id="min-note"></select>
-            <span>-</span>
-            <select id="max-note"></select>
+            <select id="min-note"></select><span>-</span><select id="max-note"></select>
         </div>
-        
+        <div class="header-group">
+            <label>出題數：</label>
+            <select id="note-count">
+                <option value="1">1 個音</option>
+                <option value="2">2 個音</option>
+                <option value="3" selected>3 個音</option>
+            </select>
+        </div>
         <div class="header-group">
             <label>A4=</label>
-            <input type="number" id="a4-input" value="440" min="415" max="460">
+            <input type="number" id="a4-input" value="440">
         </div>
-
         <div class="header-group">
-            <label title="如果聲音太小，請將此滑桿向右拉">靈敏度：</label>
+            <label>靈敏度：</label>
             <input type="range" id="sensitivity-slider" min="1" max="15" value="5" step="0.5">
         </div>
-
         <div class="mic-status">
             <span class="mic-icon" id="mic-indicator"></span>
-            <div class="volume-bar-container">
-                <div class="volume-bar-fill" id="volume-level"></div>
-            </div>
+            <div class="volume-bar-container"><div class="volume-bar-fill" id="volume-level"></div></div>
         </div>
     </header>
 
     <main>
-        <div class="target-note" id="current-note">c1</div>
+        <div class="sequence-container" id="sequence-display">
+            <div class="grid-line" style="bottom: 25%"></div>
+            <div class="grid-line" style="bottom: 50%"></div>
+            <div class="grid-line" style="bottom: 75%"></div>
+            </div>
+
         <div class="pitch-visualizer">
             <div class="target-line"></div>
             <div class="user-pitch-cursor" id="pitch-cursor"></div>
+        </div>
+
+        <div class="success-overlay" id="success-overlay">
+            <h1>🎉 恭喜過關！🎉</h1>
+            <button class="btn-massive" id="next-seq-btn">下一題 ➔</button>
         </div>
     </main>
 
     <footer>
         <button class="btn-play" id="play-btn">🎵 播放示範音</button>
-        <button class="btn-next" id="next-btn">下一題 ➔</button>
     </footer>
 
     <script>
-        // 確保網頁所有元素都載入完成後，才執行程式碼 (最高相容性寫法)
         document.addEventListener('DOMContentLoaded', () => {
             const playBtn = document.getElementById('play-btn');
-            const nextBtn = document.getElementById('next-btn');
             const micIndicator = document.getElementById('mic-indicator');
             const volumeLevel = document.getElementById('volume-level');
-            const currentNoteDisplay = document.getElementById('current-note');
             const pitchCursor = document.getElementById('pitch-cursor');
+            const sequenceDisplay = document.getElementById('sequence-display');
+            const successOverlay = document.getElementById('success-overlay');
+            const nextSeqBtn = document.getElementById('next-seq-btn');
             
             const minNoteSelect = document.getElementById('min-note');
             const maxNoteSelect = document.getElementById('max-note');
+            const noteCountSelect = document.getElementById('note-count');
             const a4Input = document.getElementById('a4-input');
             const sensitivitySlider = document.getElementById('sensitivity-slider');
             
             let audioContext;
             let analyser;
-            let microphoneStream;
             let micGainNode; 
             let isDetecting = false;
+            let isSequenceComplete = false;
             
-            let targetMidi = 60; 
+            // 闖關狀態變數
+            let currentSequence = []; // 儲存當前題目的 MIDI 陣列 (例如: [60, 64, 67])
+            let currentTargetIndex = 0; // 目前要唱陣列裡的第幾個音
             let targetFreq = 261.63; 
+            
             let matchFrames = 0; 
-            const REQUIRED_FRAMES = 20; 
-            const CENTS_TOLERANCE = 30; 
+            const REQUIRED_FRAMES = 20; // 穩定時間
+            const CENTS_TOLERANCE = 30; // 容錯音分
             let smoothedPosition = 50; 
+            const isMobile = window.innerWidth <= 820;
 
-            // MIDI 轉換絕對音名
             function midiToNoteName(midi) {
                 const noteNames = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
                 const octave = Math.floor(midi / 12) - 1; 
                 const noteName = noteNames[midi % 12];
-                
                 if (octave === 3) return noteName; 
                 if (octave === 4) return noteName + '1'; 
                 if (octave === 5) return noteName + '2'; 
@@ -278,7 +374,6 @@
                 return `${noteName}${octave}`; 
             }
 
-            // 使用最安全的 innerHTML 語法來生成選單
             function populateNoteSelectors() {
                 let optionsHtml = '';
                 for (let i = 48; i <= 84; i++) {
@@ -286,10 +381,8 @@
                 }
                 minNoteSelect.innerHTML = optionsHtml;
                 maxNoteSelect.innerHTML = optionsHtml;
-                
-                // 設定預設值：g (55) 到 e2 (76)
-                minNoteSelect.value = "55";
-                maxNoteSelect.value = "76";
+                minNoteSelect.value = "60"; // 預設 c1
+                maxNoteSelect.value = "72"; // 預設 c2
             }
 
             function midiToFreq(midi) {
@@ -297,52 +390,110 @@
                 return a4Freq * Math.pow(2, (midi - 69) / 12);
             }
 
-            function generateNewNote() {
+            // 產生新的一組題目
+            function generateSequence() {
+                successOverlay.classList.remove('show');
+                isSequenceComplete = false;
+                
                 const minMidi = parseInt(minNoteSelect.value);
                 const maxMidi = parseInt(maxNoteSelect.value);
                 const min = Math.min(minMidi, maxMidi);
                 const max = Math.max(minMidi, maxMidi);
+                const count = parseInt(noteCountSelect.value);
 
-                targetMidi = Math.floor(Math.random() * (max - min + 1)) + min;
-                targetFreq = midiToFreq(targetMidi);
-                currentNoteDisplay.textContent = midiToNoteName(targetMidi);
-                
-                pitchCursor.classList.remove('perfect');
-                matchFrames = 0;
-                smoothedPosition = 50; 
-                pitchCursor.style.bottom = '50%';
+                currentSequence = [];
+                // 刪除舊的圓點 (保留背景線)
+                const dots = sequenceDisplay.querySelectorAll('.note-dot-wrapper');
+                dots.forEach(dot => dot.remove());
+
+                for (let i = 0; i < count; i++) {
+                    // 產生亂數音高
+                    let noteMidi = Math.floor(Math.random() * (max - min + 1)) + min;
+                    currentSequence.push(noteMidi);
+
+                    // 計算在圖表中的垂直高度比例 (0% ~ 100%)
+                    let heightPercent = 50;
+                    if (max > min) {
+                        heightPercent = ((noteMidi - min) / (max - min)) * 100;
+                    }
+
+                    // 建立 DOM 元素
+                    let wrapper = document.createElement('div');
+                    wrapper.className = 'note-dot-wrapper';
+                    
+                    let dot = document.createElement('div');
+                    dot.className = 'note-dot';
+                    dot.id = `dot-${i}`;
+                    dot.style.bottom = `${heightPercent}%`;
+                    dot.textContent = midiToNoteName(noteMidi);
+                    
+                    wrapper.appendChild(dot);
+                    sequenceDisplay.appendChild(wrapper);
+                }
+
+                // 初始化第一個音
+                currentTargetIndex = 0;
+                setTargetNote(0);
             }
 
-            // 執行初始化
-            populateNoteSelectors();
-            generateNewNote();
-
-            // 綁定事件
-            minNoteSelect.addEventListener('change', generateNewNote);
-            maxNoteSelect.addEventListener('change', generateNewNote);
-            a4Input.addEventListener('change', () => { targetFreq = midiToFreq(targetMidi); });
-
-            sensitivitySlider.addEventListener('input', (e) => {
-                if (micGainNode) {
-                    micGainNode.gain.value = parseFloat(e.target.value);
+            // 設定當前要偵測的目標音
+            function setTargetNote(index) {
+                targetFreq = midiToFreq(currentSequence[index]);
+                matchFrames = 0;
+                
+                // 更新 UI 圓點狀態
+                for (let i = 0; i < currentSequence.length; i++) {
+                    let dot = document.getElementById(`dot-${i}`);
+                    dot.classList.remove('active');
+                    if (i < index) {
+                        dot.classList.add('done'); // 之前的標記為完成
+                    }
                 }
+                
+                if (index < currentSequence.length) {
+                    document.getElementById(`dot-${index}`).classList.add('active'); // 當前的亮起
+                }
+            }
+
+            populateNoteSelectors();
+            generateSequence();
+
+            minNoteSelect.addEventListener('change', generateSequence);
+            maxNoteSelect.addEventListener('change', generateSequence);
+            noteCountSelect.addEventListener('change', generateSequence);
+            a4Input.addEventListener('change', () => { targetFreq = midiToFreq(currentSequence[currentTargetIndex]); });
+            nextSeqBtn.addEventListener('click', generateSequence);
+            
+            sensitivitySlider.addEventListener('input', (e) => {
+                if (micGainNode) micGainNode.gain.value = parseFloat(e.target.value);
             });
 
+            // 播放整個序列的聲音
             playBtn.addEventListener('click', () => {
                 if (!audioContext) initAudio();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
                 
-                oscillator.type = 'sine'; 
-                oscillator.frequency.value = targetFreq; 
+                let startTime = audioContext.currentTime;
+                // 每個音播放 1.2 秒，中間間隔 0.1 秒
+                const noteDuration = 1.2; 
                 
-                gainNode.gain.setValueAtTime(1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 3.0); 
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + 3.0); 
+                currentSequence.forEach((midi, index) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.type = 'sine'; 
+                    oscillator.frequency.value = midiToFreq(midi); 
+                    
+                    let playTime = startTime + (index * (noteDuration + 0.1));
+                    
+                    gainNode.gain.setValueAtTime(0, playTime);
+                    gainNode.gain.linearRampToValueAtTime(1, playTime + 0.1);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, playTime + noteDuration); 
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    oscillator.start(playTime);
+                    oscillator.stop(playTime + noteDuration); 
+                });
             });
 
             function initAudio() {
@@ -352,25 +503,19 @@
                 analyser.fftSize = 2048;
             }
 
-            document.body.addEventListener('click', async () => {
+            document.body.addEventListener('click', async (e) => {
+                // 如果點擊的是按鈕或選單，就不觸發麥克風要求
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+                
                 if (micIndicator.style.backgroundColor === 'green') return;
                 try {
                     if (!audioContext) initAudio();
-                    
-                    // 確保瀏覽器支援 getUserMedia
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        alert('您的瀏覽器不支援麥克風，或您沒有使用安全的 HTTPS 網線連線。');
-                        return;
-                    }
-
                     const stream = await navigator.mediaDevices.getUserMedia({ 
                         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
                     }); 
-                    
                     micIndicator.style.backgroundColor = 'green';
                     
-                    microphoneStream = audioContext.createMediaStreamSource(stream);
-                    
+                    let microphoneStream = audioContext.createMediaStreamSource(stream);
                     micGainNode = audioContext.createGain();
                     micGainNode.gain.value = parseFloat(sensitivitySlider.value); 
                     
@@ -380,25 +525,25 @@
                     isDetecting = true;
                     updatePitch(); 
                 } catch (err) {
-                    console.error("麥克風存取錯誤:", err);
-                    alert('無法開啟麥克風。請確認您已給予權限，且網址為 https 開頭。');
+                    console.error("麥克風錯誤:", err);
+                    alert('無法開啟麥克風。請確認權限。');
                 }
-            }, { once: true });
+            }); // 這裡不加 {once: true}，因為加了條件判斷
 
             const buffer = new Float32Array(2048);
 
             function updatePitch() {
-                if (!isDetecting) return;
-                analyser.getFloatTimeDomainData(buffer);
-                
-                let rms = 0;
-                for (let i = 0; i < buffer.length; i++) {
-                    rms += buffer[i] * buffer[i];
+                if (!isDetecting || isSequenceComplete) {
+                    if(!isSequenceComplete) requestAnimationFrame(updatePitch);
+                    return;
                 }
+
+                analyser.getFloatTimeDomainData(buffer);
+                let rms = 0;
+                for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
                 rms = Math.sqrt(rms / buffer.length);
                 
-                let volumePercent = Math.min(100, rms * 100 * 5);
-                volumeLevel.style.width = volumePercent + '%';
+                volumeLevel.style.width = Math.min(100, rms * 100 * 5) + '%';
 
                 if (rms > 0.002) { 
                     pitchCursor.classList.add('active');
@@ -410,7 +555,15 @@
                         targetPosition = Math.max(0, Math.min(100, targetPosition));
 
                         smoothedPosition = (smoothedPosition * 0.85) + (targetPosition * 0.15);
-                        pitchCursor.style.bottom = `${smoothedPosition}%`;
+                        
+                        // 處理手機直式排版 (左/右移動) 與 電腦橫式排版 (上/下移動)
+                        if (isMobile) {
+                            pitchCursor.style.left = `${smoothedPosition}%`;
+                            pitchCursor.style.bottom = '0';
+                        } else {
+                            pitchCursor.style.bottom = `${smoothedPosition}%`;
+                            pitchCursor.style.left = '';
+                        }
 
                         let smoothedCentsDiff = (smoothedPosition - 50) * 2;
 
@@ -418,9 +571,27 @@
                             matchFrames++;
                             if (matchFrames > REQUIRED_FRAMES) {
                                 pitchCursor.classList.add('perfect');
-                                setTimeout(() => {
-                                    generateNewNote();
-                                }, 1500);
+                                
+                                // 這個音過關了！前往下一個音
+                                currentTargetIndex++;
+                                
+                                if (currentTargetIndex >= currentSequence.length) {
+                                    // 全部過關！
+                                    isSequenceComplete = true;
+                                    document.getElementById(`dot-${currentTargetIndex-1}`).classList.add('done');
+                                    document.getElementById(`dot-${currentTargetIndex-1}`).classList.remove('active');
+                                    successOverlay.classList.add('show');
+                                } else {
+                                    // 還有下一個音，給予 0.5 秒的緩衝時間換氣
+                                    isDetecting = false;
+                                    setTimeout(() => {
+                                        setTargetNote(currentTargetIndex);
+                                        pitchCursor.classList.remove('perfect');
+                                        isDetecting = true;
+                                        updatePitch(); // 重新啟動偵測迴圈
+                                    }, 500);
+                                    return; // 暫停當前的迴圈
+                                }
                             }
                         } else {
                             pitchCursor.classList.remove('perfect');
@@ -432,13 +603,12 @@
                     pitchCursor.classList.remove('perfect');
                     matchFrames = 0;
                     smoothedPosition = (smoothedPosition * 0.9) + (50 * 0.1);
-                    pitchCursor.style.bottom = `${smoothedPosition}%`;
+                    if (isMobile) pitchCursor.style.left = `${smoothedPosition}%`;
+                    else pitchCursor.style.bottom = `${smoothedPosition}%`;
                 }
                 
                 requestAnimationFrame(updatePitch);
             }
-
-            nextBtn.addEventListener('click', generateNewNote);
 
             function autoCorrelate(buf, sampleRate) {
                 let SIZE = buf.length;
@@ -448,19 +618,12 @@
 
                 buf = buf.slice(r1, r2);
                 SIZE = buf.length;
-
                 let c = new Array(SIZE).fill(0);
-                for (let i = 0; i < SIZE; i++)
-                    for (let j = 0; j < SIZE - i; j++)
-                        c[i] = c[i] + buf[j] * buf[j + i];
-
+                for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE - i; j++) c[i] = c[i] + buf[j] * buf[j + i];
                 let d = 0; while (c[d] > c[d + 1]) d++;
                 let maxval = -1, maxpos = -1;
-                for (let i = d; i < SIZE; i++) {
-                    if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
-                }
-                let T0 = maxpos;
-                return sampleRate / T0;
+                for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+                return sampleRate / maxpos;
             }
         });
     </script>
