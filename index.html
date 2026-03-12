@@ -186,15 +186,16 @@
 
         .note-dot {
             position: absolute;
-            width: 70px;
-            height: 70px;
+            /* 稍微加寬圓點以容納 Do# 這種長度的字 */
+            width: 75px;
+            height: 75px;
             background-color: var(--panel-bg);
             border: 5px solid var(--dot-color);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 900;
             color: #BDBDBD;
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -418,20 +419,23 @@
             let targetFreq = 261.63; 
             
             let matchFrames = 0; 
-            // 增加需要穩定的時間 (從 15 幀提高到 20 幀，大約需要穩定唱準 0.35 秒才會過關，避免被短暫雜音矇騙)
             const REQUIRED_FRAMES = 20; 
             const CENTS_TOLERANCE = 35; 
             let smoothedPosition = 50; 
 
+            // 【重點修改 1：改用 Do Re Mi 唱名】
             function midiToNoteName(midi) {
-                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                // 將絕對音名 C, D, E 轉換成唱名 Do, Re, Mi
+                const noteNames = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
                 const octave = Math.floor(midi / 12) - 1; 
                 const noteName = noteNames[midi % 12];
-                if (octave === 3) return noteName.toLowerCase(); 
-                if (octave === 4) return noteName.toLowerCase() + '1'; 
-                if (octave === 5) return noteName.toLowerCase() + '2'; 
-                if (octave === 6) return noteName.toLowerCase() + '3'; 
-                return `${noteName.toLowerCase()}${octave}`; 
+                
+                // 保留小字組的數字標示，讓不同八度的 Do 依然可以被分辨
+                if (octave === 3) return noteName; 
+                if (octave === 4) return noteName + '1'; 
+                if (octave === 5) return noteName + '2'; 
+                if (octave === 6) return noteName + '3'; 
+                return `${noteName}${octave}`; 
             }
 
             function populateNoteSelectors() {
@@ -441,8 +445,8 @@
                 }
                 minNoteSelect.innerHTML = optionsHtml;
                 maxNoteSelect.innerHTML = optionsHtml;
-                minNoteSelect.value = "60"; 
-                maxNoteSelect.value = "72"; 
+                minNoteSelect.value = "60"; // 預設 Do1 (原本的 c1)
+                maxNoteSelect.value = "72"; // 預設 Do2 (原本的 c2)
             }
 
             function midiToFreq(midi) {
@@ -470,7 +474,8 @@
                 
                 gainNode.gain.setValueAtTime(0, startTime);
                 gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.1); 
-                gainNode.gain.setValueAtTime(0.3, startTime + duration - 0.5); 
+                // 配合 1 秒的長度，提早在結束前 0.2 秒開始收尾，避免聲音過長
+                gainNode.gain.setValueAtTime(0.3, startTime + duration - 0.2); 
                 gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
                 
                 oscillator.start(startTime);
@@ -481,7 +486,8 @@
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
                 const now = audioContext.currentTime;
-                playSimpleTone(midiToFreq(midi), now, 2.5);
+                // 單顆點擊：播放 1 秒
+                playSimpleTone(midiToFreq(midi), now, 1.0);
             }
 
             function generateSequence() {
@@ -562,8 +568,9 @@
                 if (audioContext.state === 'suspended') audioContext.resume();
                 
                 let startTime = audioContext.currentTime;
-                const noteDuration = 2.5; 
-                const gapDuration = 0.5;  
+                // 【重點修改 2：連續播放長度改回 1 秒】
+                const noteDuration = 1.0; 
+                const gapDuration = 0.3;  // 間隔稍微縮短，讓整體聽起來更緊湊
                 
                 currentSequence.forEach((midi, index) => {
                     let playTime = startTime + (index * (noteDuration + gapDuration));
@@ -614,13 +621,10 @@
                 
                 volumeLevel.style.width = Math.min(100, rms * 100 * 5) + '%';
 
-                // 【核心修改 1】：提高啟動門檻 (Threshold)。過濾掉微小的環境白噪音
-                // 只有當音量達到一定程度，游標才會從半透明亮起並開始判斷
                 if (rms > 0.008) { 
                     pitchCursor.classList.add('active');
                     let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
                     
-                    // 只有當音色純度過濾器回傳不是 -1 時，才移動游標
                     if (currentFreq !== -1) {
                         let centsDiff = 1200 * Math.log2(currentFreq / targetFreq);
                         
@@ -658,7 +662,6 @@
                         }
                     }
                 } else {
-                    // 如果聲音太小，游標休眠並滑回中間
                     pitchCursor.classList.remove('active');
                     pitchCursor.classList.remove('perfect');
                     matchFrames = 0;
@@ -682,11 +685,9 @@
                 let maxval = -1, maxpos = -1;
                 for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
                 
-                // 【核心修改 2】：加入音色純度 (Clarity) 過濾器
-                // 如果找到的頻率峰值強度，遠小於整段聲音的總能量，代表這幾乎是一團沒音高的死雜音
                 let clarity = maxval / c[0];
                 if (clarity < 0.85) {
-                    return -1; // 拒絕處理這個雜音，直接回傳 -1
+                    return -1; 
                 }
 
                 let T0 = maxpos;
