@@ -33,13 +33,14 @@
             padding: 20px 30px;
             background-color: var(--panel-bg);
             box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            flex-wrap: wrap; /* 讓元素在小螢幕時自動換行 */
+            flex-wrap: wrap; 
+            gap: 15px;
         }
 
         .header-group {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             font-size: 1.1rem;
         }
 
@@ -54,9 +55,14 @@
             text-align: center;
         }
 
-        /* 隱藏數字輸入框的上下箭頭 */
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"] { width: 60px; -moz-appearance: textfield; }
+
+        /* 新增：靈敏度滑桿樣式 */
+        input[type="range"] {
+            width: 100px;
+            cursor: pointer;
+        }
 
         .mic-status {
             font-size: 0.9rem;
@@ -75,10 +81,10 @@
         }
 
         .volume-bar-container {
-            width: 60px;
-            height: 8px;
+            width: 80px;
+            height: 10px;
             background-color: #333;
-            border-radius: 4px;
+            border-radius: 5px;
             overflow: hidden;
             display: inline-block;
             vertical-align: middle;
@@ -88,7 +94,7 @@
             height: 100%;
             width: 0%; 
             background-color: var(--accent-color);
-            transition: width 0.1s ease-out;
+            transition: width 0.05s ease-out; /* 讓音量條反應更即時 */
         }
 
         main {
@@ -137,15 +143,12 @@
             background-color: var(--warning-color);
             border-radius: 50%;
             transform: translateY(50%); 
-            /* 將動畫過渡時間拉長，增加視覺平滑感 */
             transition: bottom 0.15s linear, background-color 0.3s;
             box-shadow: 0 0 15px var(--warning-color);
             opacity: 0.2; 
         }
 
-        .user-pitch-cursor.active {
-            opacity: 1; 
-        }
+        .user-pitch-cursor.active { opacity: 1; }
 
         .user-pitch-cursor.perfect {
             background-color: var(--accent-color);
@@ -154,7 +157,7 @@
         }
 
         footer {
-            padding: 30px;
+            padding: 20px;
             display: flex;
             justify-content: center;
             gap: 20px;
@@ -171,9 +174,7 @@
             transition: transform 0.2s, background-color 0.2s;
         }
 
-        button:hover {
-            transform: scale(1.05);
-        }
+        button:hover { transform: scale(1.05); }
 
         .btn-play {
             background-color: #2196F3;
@@ -188,15 +189,10 @@
         }
         
         @media (max-width: 820px) {
-            header {
-                padding: 15px 20px;
-                flex-direction: column; 
-                gap: 15px;
-            }
-            .header-group { flex-wrap: wrap; justify-content: center; }
+            header { padding: 15px 10px; justify-content: center; }
+            .header-group { font-size: 1rem; }
             .target-note { font-size: 6rem; }
             .pitch-visualizer { height: 220px; }
-            footer { padding: 15px; }
             button { padding: 12px 25px; font-size: 1.2rem; }
         }
     </style>
@@ -205,30 +201,24 @@
 
     <header>
         <div class="header-group">
-            <label>音域範圍：</label>
-            <select id="min-note">
-                <option value="55" selected>g</option>
-                <option value="57">a</option>
-                <option value="59">b</option>
-                <option value="60">c1</option>
-            </select>
-            <span>至</span>
-            <select id="max-note">
-                <option value="72">c2</option>
-                <option value="74">d2</option>
-                <option value="76" selected>e2</option>
-            </select>
+            <label>範圍：</label>
+            <select id="min-note"></select>
+            <span>-</span>
+            <select id="max-note"></select>
         </div>
         
         <div class="header-group">
-            <label>基準音 A4 = </label>
+            <label>A4=</label>
             <input type="number" id="a4-input" value="440" min="415" max="460">
-            <span>Hz</span>
+        </div>
+
+        <div class="header-group">
+            <label title="如果聲音太小，請將此滑桿向右拉">靈敏度：</label>
+            <input type="range" id="sensitivity-slider" min="1" max="15" value="5" step="0.5">
         </div>
 
         <div class="mic-status">
             <span class="mic-icon" id="mic-indicator"></span>
-            <span id="mic-text">未連線</span>
             <div class="volume-bar-container">
                 <div class="volume-bar-fill" id="volume-level"></div>
             </div>
@@ -252,7 +242,6 @@
         const playBtn = document.getElementById('play-btn');
         const nextBtn = document.getElementById('next-btn');
         const micIndicator = document.getElementById('mic-indicator');
-        const micText = document.getElementById('mic-text');
         const volumeLevel = document.getElementById('volume-level');
         const currentNoteDisplay = document.getElementById('current-note');
         const pitchCursor = document.getElementById('pitch-cursor');
@@ -260,10 +249,12 @@
         const minNoteSelect = document.getElementById('min-note');
         const maxNoteSelect = document.getElementById('max-note');
         const a4Input = document.getElementById('a4-input');
+        const sensitivitySlider = document.getElementById('sensitivity-slider');
         
         let audioContext;
         let analyser;
         let microphoneStream;
+        let micGainNode; // 麥克風音量放大器
         let isDetecting = false;
         
         let targetMidi = 60; 
@@ -271,11 +262,22 @@
         let matchFrames = 0; 
         const REQUIRED_FRAMES = 20; 
         const CENTS_TOLERANCE = 30; 
-
-        // 平滑化變數 (紀錄游標當前位置，預設在中間 50%)
         let smoothedPosition = 50; 
 
-        // 改寫公式：動態讀取畫面上設定的 A4 基準頻率 (預設440)
+        // 動態生成所有音符選項 (從 MIDI 48 到 84，即 c 到 c3)
+        function populateNoteSelectors() {
+            minNoteSelect.innerHTML = '';
+            maxNoteSelect.innerHTML = '';
+            for (let i = 48; i <= 84; i++) {
+                let noteName = midiToNoteName(i);
+                minNoteSelect.options.add(new Option(noteName, i));
+                maxNoteSelect.options.add(new Option(noteName, i));
+            }
+            // 設定預設值：g (55) 到 e2 (76)
+            minNoteSelect.value = "55";
+            maxNoteSelect.value = "76";
+        }
+
         function midiToFreq(midi) {
             const a4Freq = parseFloat(a4Input.value) || 440;
             return a4Freq * Math.pow(2, (midi - 69) / 12);
@@ -289,6 +291,7 @@
             if (octave === 3) return noteName; 
             if (octave === 4) return noteName + '1'; 
             if (octave === 5) return noteName + '2'; 
+            if (octave === 6) return noteName + '3'; 
             return `${noteName}${octave}`; 
         }
 
@@ -304,16 +307,23 @@
             
             pitchCursor.classList.remove('perfect');
             matchFrames = 0;
-            smoothedPosition = 50; // 換題時游標歸位
+            smoothedPosition = 50; 
             pitchCursor.style.bottom = '50%';
         }
 
+        // 初始化下拉選單並產生第一題
+        populateNoteSelectors();
+        generateNewNote();
+
         minNoteSelect.addEventListener('change', generateNewNote);
         maxNoteSelect.addEventListener('change', generateNewNote);
-        
-        // 當基準音 A4 改變時，立刻重新計算當前題目的目標頻率
-        a4Input.addEventListener('change', () => {
-            targetFreq = midiToFreq(targetMidi);
+        a4Input.addEventListener('change', () => { targetFreq = midiToFreq(targetMidi); });
+
+        // 即時調整麥克風放大倍率
+        sensitivitySlider.addEventListener('input', (e) => {
+            if (micGainNode) {
+                micGainNode.gain.value = parseFloat(e.target.value);
+            }
         });
 
         playBtn.addEventListener('click', () => {
@@ -348,10 +358,15 @@
                 }); 
                 
                 micIndicator.style.backgroundColor = 'green';
-                micText.textContent = '已連線';
                 
                 microphoneStream = audioContext.createMediaStreamSource(stream);
-                microphoneStream.connect(analyser);
+                
+                // 建立訊號放大器並連接
+                micGainNode = audioContext.createGain();
+                micGainNode.gain.value = parseFloat(sensitivitySlider.value); 
+                
+                microphoneStream.connect(micGainNode);
+                micGainNode.connect(analyser);
                 
                 isDetecting = true;
                 updatePitch(); 
@@ -361,89 +376,4 @@
             }
         }, { once: true });
 
-        const buffer = new Float32Array(2048);
-
-        function updatePitch() {
-            if (!isDetecting) return;
-            analyser.getFloatTimeDomainData(buffer);
-            
-            let rms = 0;
-            for (let i = 0; i < buffer.length; i++) {
-                rms += buffer[i] * buffer[i];
-            }
-            rms = Math.sqrt(rms / buffer.length);
-            
-            let volumePercent = Math.min(100, rms * 100 * 5);
-            volumeLevel.style.width = volumePercent + '%';
-
-            if (rms > 0.005) { 
-                pitchCursor.classList.add('active');
-                let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
-                
-                if (currentFreq !== -1) {
-                    let centsDiff = 1200 * Math.log2(currentFreq / targetFreq);
-                    let targetPosition = 50 + (centsDiff / 2); 
-                    targetPosition = Math.max(0, Math.min(100, targetPosition));
-
-                    // --- 關鍵修改：加入平滑化演算法 ---
-                    // 0.85 的慣性加上 0.15 的新數值，讓游標移動變得柔和不抽搐
-                    smoothedPosition = (smoothedPosition * 0.85) + (targetPosition * 0.15);
-                    pitchCursor.style.bottom = `${smoothedPosition}%`;
-
-                    // 用平滑後的數值來判斷是否過關，減少因為瞬間氣流不穩造成的判定中斷
-                    let smoothedCentsDiff = (smoothedPosition - 50) * 2;
-
-                    if (Math.abs(smoothedCentsDiff) < CENTS_TOLERANCE) {
-                        matchFrames++;
-                        if (matchFrames > REQUIRED_FRAMES) {
-                            pitchCursor.classList.add('perfect');
-                            setTimeout(() => {
-                                generateNewNote();
-                            }, 1500);
-                        }
-                    } else {
-                        pitchCursor.classList.remove('perfect');
-                        matchFrames = 0;
-                    }
-                }
-            } else {
-                pitchCursor.classList.remove('active');
-                pitchCursor.classList.remove('perfect');
-                matchFrames = 0;
-                // 沒聲音時，讓游標慢慢滑回中央，而不是瞬間跳回去
-                smoothedPosition = (smoothedPosition * 0.9) + (50 * 0.1);
-                pitchCursor.style.bottom = `${smoothedPosition}%`;
-            }
-            
-            requestAnimationFrame(updatePitch);
-        }
-
-        nextBtn.addEventListener('click', generateNewNote);
-
-        function autoCorrelate(buf, sampleRate) {
-            let SIZE = buf.length;
-            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
-            for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-            for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
-
-            buf = buf.slice(r1, r2);
-            SIZE = buf.length;
-
-            let c = new Array(SIZE).fill(0);
-            for (let i = 0; i < SIZE; i++)
-                for (let j = 0; j < SIZE - i; j++)
-                    c[i] = c[i] + buf[j] * buf[j + i];
-
-            let d = 0; while (c[d] > c[d + 1]) d++;
-            let maxval = -1, maxpos = -1;
-            for (let i = d; i < SIZE; i++) {
-                if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
-            }
-            let T0 = maxpos;
-            return sampleRate / T0;
-        }
-
-        generateNewNote();
-    </script>
-</body>
-</html>
+        const buffer = new Float32Array(2048
