@@ -58,7 +58,6 @@
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"] { width: 60px; -moz-appearance: textfield; }
 
-        /* 新增：靈敏度滑桿樣式 */
         input[type="range"] {
             width: 100px;
             cursor: pointer;
@@ -94,7 +93,7 @@
             height: 100%;
             width: 0%; 
             background-color: var(--accent-color);
-            transition: width 0.05s ease-out; /* 讓音量條反應更即時 */
+            transition: width 0.05s ease-out;
         }
 
         main {
@@ -239,141 +238,231 @@
     </footer>
 
     <script>
-        const playBtn = document.getElementById('play-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const micIndicator = document.getElementById('mic-indicator');
-        const volumeLevel = document.getElementById('volume-level');
-        const currentNoteDisplay = document.getElementById('current-note');
-        const pitchCursor = document.getElementById('pitch-cursor');
-        
-        const minNoteSelect = document.getElementById('min-note');
-        const maxNoteSelect = document.getElementById('max-note');
-        const a4Input = document.getElementById('a4-input');
-        const sensitivitySlider = document.getElementById('sensitivity-slider');
-        
-        let audioContext;
-        let analyser;
-        let microphoneStream;
-        let micGainNode; // 麥克風音量放大器
-        let isDetecting = false;
-        
-        let targetMidi = 60; 
-        let targetFreq = 261.63; 
-        let matchFrames = 0; 
-        const REQUIRED_FRAMES = 20; 
-        const CENTS_TOLERANCE = 30; 
-        let smoothedPosition = 50; 
+        // 確保網頁所有元素都載入完成後，才執行程式碼 (最高相容性寫法)
+        document.addEventListener('DOMContentLoaded', () => {
+            const playBtn = document.getElementById('play-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const micIndicator = document.getElementById('mic-indicator');
+            const volumeLevel = document.getElementById('volume-level');
+            const currentNoteDisplay = document.getElementById('current-note');
+            const pitchCursor = document.getElementById('pitch-cursor');
+            
+            const minNoteSelect = document.getElementById('min-note');
+            const maxNoteSelect = document.getElementById('max-note');
+            const a4Input = document.getElementById('a4-input');
+            const sensitivitySlider = document.getElementById('sensitivity-slider');
+            
+            let audioContext;
+            let analyser;
+            let microphoneStream;
+            let micGainNode; 
+            let isDetecting = false;
+            
+            let targetMidi = 60; 
+            let targetFreq = 261.63; 
+            let matchFrames = 0; 
+            const REQUIRED_FRAMES = 20; 
+            const CENTS_TOLERANCE = 30; 
+            let smoothedPosition = 50; 
 
-        // 動態生成所有音符選項 (從 MIDI 48 到 84，即 c 到 c3)
-        function populateNoteSelectors() {
-            minNoteSelect.innerHTML = '';
-            maxNoteSelect.innerHTML = '';
-            for (let i = 48; i <= 84; i++) {
-                let noteName = midiToNoteName(i);
-                minNoteSelect.options.add(new Option(noteName, i));
-                maxNoteSelect.options.add(new Option(noteName, i));
+            // MIDI 轉換絕對音名
+            function midiToNoteName(midi) {
+                const noteNames = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
+                const octave = Math.floor(midi / 12) - 1; 
+                const noteName = noteNames[midi % 12];
+                
+                if (octave === 3) return noteName; 
+                if (octave === 4) return noteName + '1'; 
+                if (octave === 5) return noteName + '2'; 
+                if (octave === 6) return noteName + '3'; 
+                return `${noteName}${octave}`; 
             }
-            // 設定預設值：g (55) 到 e2 (76)
-            minNoteSelect.value = "55";
-            maxNoteSelect.value = "76";
-        }
 
-        function midiToFreq(midi) {
-            const a4Freq = parseFloat(a4Input.value) || 440;
-            return a4Freq * Math.pow(2, (midi - 69) / 12);
-        }
-
-        function midiToNoteName(midi) {
-            const noteNames = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
-            const octave = Math.floor(midi / 12) - 1; 
-            const noteName = noteNames[midi % 12];
-            
-            if (octave === 3) return noteName; 
-            if (octave === 4) return noteName + '1'; 
-            if (octave === 5) return noteName + '2'; 
-            if (octave === 6) return noteName + '3'; 
-            return `${noteName}${octave}`; 
-        }
-
-        function generateNewNote() {
-            const minMidi = parseInt(minNoteSelect.value);
-            const maxMidi = parseInt(maxNoteSelect.value);
-            const min = Math.min(minMidi, maxMidi);
-            const max = Math.max(minMidi, maxMidi);
-
-            targetMidi = Math.floor(Math.random() * (max - min + 1)) + min;
-            targetFreq = midiToFreq(targetMidi);
-            currentNoteDisplay.textContent = midiToNoteName(targetMidi);
-            
-            pitchCursor.classList.remove('perfect');
-            matchFrames = 0;
-            smoothedPosition = 50; 
-            pitchCursor.style.bottom = '50%';
-        }
-
-        // 初始化下拉選單並產生第一題
-        populateNoteSelectors();
-        generateNewNote();
-
-        minNoteSelect.addEventListener('change', generateNewNote);
-        maxNoteSelect.addEventListener('change', generateNewNote);
-        a4Input.addEventListener('change', () => { targetFreq = midiToFreq(targetMidi); });
-
-        // 即時調整麥克風放大倍率
-        sensitivitySlider.addEventListener('input', (e) => {
-            if (micGainNode) {
-                micGainNode.gain.value = parseFloat(e.target.value);
+            // 使用最安全的 innerHTML 語法來生成選單
+            function populateNoteSelectors() {
+                let optionsHtml = '';
+                for (let i = 48; i <= 84; i++) {
+                    optionsHtml += `<option value="${i}">${midiToNoteName(i)}</option>`;
+                }
+                minNoteSelect.innerHTML = optionsHtml;
+                maxNoteSelect.innerHTML = optionsHtml;
+                
+                // 設定預設值：g (55) 到 e2 (76)
+                minNoteSelect.value = "55";
+                maxNoteSelect.value = "76";
             }
-        });
 
-        playBtn.addEventListener('click', () => {
-            if (!audioContext) initAudio();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.type = 'sine'; 
-            oscillator.frequency.value = targetFreq; 
-            
-            gainNode.gain.setValueAtTime(1, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 3.0); 
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 3.0); 
-        });
+            function midiToFreq(midi) {
+                const a4Freq = parseFloat(a4Input.value) || 440;
+                return a4Freq * Math.pow(2, (midi - 69) / 12);
+            }
 
-        function initAudio() {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 2048;
-        }
+            function generateNewNote() {
+                const minMidi = parseInt(minNoteSelect.value);
+                const maxMidi = parseInt(maxNoteSelect.value);
+                const min = Math.min(minMidi, maxMidi);
+                const max = Math.max(minMidi, maxMidi);
 
-        document.body.addEventListener('click', async () => {
-            if (micIndicator.style.backgroundColor === 'green') return;
-            try {
+                targetMidi = Math.floor(Math.random() * (max - min + 1)) + min;
+                targetFreq = midiToFreq(targetMidi);
+                currentNoteDisplay.textContent = midiToNoteName(targetMidi);
+                
+                pitchCursor.classList.remove('perfect');
+                matchFrames = 0;
+                smoothedPosition = 50; 
+                pitchCursor.style.bottom = '50%';
+            }
+
+            // 執行初始化
+            populateNoteSelectors();
+            generateNewNote();
+
+            // 綁定事件
+            minNoteSelect.addEventListener('change', generateNewNote);
+            maxNoteSelect.addEventListener('change', generateNewNote);
+            a4Input.addEventListener('change', () => { targetFreq = midiToFreq(targetMidi); });
+
+            sensitivitySlider.addEventListener('input', (e) => {
+                if (micGainNode) {
+                    micGainNode.gain.value = parseFloat(e.target.value);
+                }
+            });
+
+            playBtn.addEventListener('click', () => {
                 if (!audioContext) initAudio();
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
-                }); 
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
                 
-                micIndicator.style.backgroundColor = 'green';
+                oscillator.type = 'sine'; 
+                oscillator.frequency.value = targetFreq; 
                 
-                microphoneStream = audioContext.createMediaStreamSource(stream);
+                gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 3.0); 
                 
-                // 建立訊號放大器並連接
-                micGainNode = audioContext.createGain();
-                micGainNode.gain.value = parseFloat(sensitivitySlider.value); 
-                
-                microphoneStream.connect(micGainNode);
-                micGainNode.connect(analyser);
-                
-                isDetecting = true;
-                updatePitch(); 
-            } catch (err) {
-                console.error(err);
-                alert('請允許使用麥克風才能練習喔！');
-            }
-        }, { once: true });
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 3.0); 
+            });
 
-        const buffer = new Float32Array(2048
+            function initAudio() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+            }
+
+            document.body.addEventListener('click', async () => {
+                if (micIndicator.style.backgroundColor === 'green') return;
+                try {
+                    if (!audioContext) initAudio();
+                    
+                    // 確保瀏覽器支援 getUserMedia
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        alert('您的瀏覽器不支援麥克風，或您沒有使用安全的 HTTPS 網線連線。');
+                        return;
+                    }
+
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+                    }); 
+                    
+                    micIndicator.style.backgroundColor = 'green';
+                    
+                    microphoneStream = audioContext.createMediaStreamSource(stream);
+                    
+                    micGainNode = audioContext.createGain();
+                    micGainNode.gain.value = parseFloat(sensitivitySlider.value); 
+                    
+                    microphoneStream.connect(micGainNode);
+                    micGainNode.connect(analyser);
+                    
+                    isDetecting = true;
+                    updatePitch(); 
+                } catch (err) {
+                    console.error("麥克風存取錯誤:", err);
+                    alert('無法開啟麥克風。請確認您已給予權限，且網址為 https 開頭。');
+                }
+            }, { once: true });
+
+            const buffer = new Float32Array(2048);
+
+            function updatePitch() {
+                if (!isDetecting) return;
+                analyser.getFloatTimeDomainData(buffer);
+                
+                let rms = 0;
+                for (let i = 0; i < buffer.length; i++) {
+                    rms += buffer[i] * buffer[i];
+                }
+                rms = Math.sqrt(rms / buffer.length);
+                
+                let volumePercent = Math.min(100, rms * 100 * 5);
+                volumeLevel.style.width = volumePercent + '%';
+
+                if (rms > 0.002) { 
+                    pitchCursor.classList.add('active');
+                    let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
+                    
+                    if (currentFreq !== -1) {
+                        let centsDiff = 1200 * Math.log2(currentFreq / targetFreq);
+                        let targetPosition = 50 + (centsDiff / 2); 
+                        targetPosition = Math.max(0, Math.min(100, targetPosition));
+
+                        smoothedPosition = (smoothedPosition * 0.85) + (targetPosition * 0.15);
+                        pitchCursor.style.bottom = `${smoothedPosition}%`;
+
+                        let smoothedCentsDiff = (smoothedPosition - 50) * 2;
+
+                        if (Math.abs(smoothedCentsDiff) < CENTS_TOLERANCE) {
+                            matchFrames++;
+                            if (matchFrames > REQUIRED_FRAMES) {
+                                pitchCursor.classList.add('perfect');
+                                setTimeout(() => {
+                                    generateNewNote();
+                                }, 1500);
+                            }
+                        } else {
+                            pitchCursor.classList.remove('perfect');
+                            matchFrames = 0;
+                        }
+                    }
+                } else {
+                    pitchCursor.classList.remove('active');
+                    pitchCursor.classList.remove('perfect');
+                    matchFrames = 0;
+                    smoothedPosition = (smoothedPosition * 0.9) + (50 * 0.1);
+                    pitchCursor.style.bottom = `${smoothedPosition}%`;
+                }
+                
+                requestAnimationFrame(updatePitch);
+            }
+
+            nextBtn.addEventListener('click', generateNewNote);
+
+            function autoCorrelate(buf, sampleRate) {
+                let SIZE = buf.length;
+                let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+                for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+                for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+
+                buf = buf.slice(r1, r2);
+                SIZE = buf.length;
+
+                let c = new Array(SIZE).fill(0);
+                for (let i = 0; i < SIZE; i++)
+                    for (let j = 0; j < SIZE - i; j++)
+                        c[i] = c[i] + buf[j] * buf[j + i];
+
+                let d = 0; while (c[d] > c[d + 1]) d++;
+                let maxval = -1, maxpos = -1;
+                for (let i = d; i < SIZE; i++) {
+                    if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+                }
+                let T0 = maxpos;
+                return sampleRate / T0;
+            }
+        });
+    </script>
+</body>
+</html>
