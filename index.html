@@ -264,6 +264,72 @@
             transform: translateY(50%) scale(1.2);
         }
 
+        /* --- 新增：遊戲開始前的提示卡懸浮視窗 --- */
+        .intro-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(224, 247, 250, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .intro-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .intro-card {
+            background-color: white;
+            padding: 35px 40px;
+            border-radius: 40px;
+            border: 6px solid var(--border-color);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 80%;
+            max-width: 450px;
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .intro-overlay.show .intro-card {
+            transform: scale(1);
+        }
+        .intro-card h2 {
+            font-size: 2.2rem;
+            color: var(--text-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .intro-card p {
+            font-size: 1.2rem;
+            color: #795548;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .btn-start-game {
+            background-color: #FFB74D; 
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            font-family: inherit;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #F57C00;
+            transition: all 0.1s;
+        }
+        .btn-start-game:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 #F57C00;
+        }
+
+        /* --- 原本的過關畫面 --- */
         .success-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -331,6 +397,9 @@
             .user-pitch-cursor { bottom: 0; left: var(--cursor-pos); transform: translateX(-50%); }
             .user-pitch-cursor.perfect { transform: translateX(-50%) scale(1.2); }
             .success-overlay h1 { font-size: 3.5rem; }
+            .intro-card h2 { font-size: 1.6rem; }
+            .intro-card p { font-size: 1rem; }
+            .btn-start-game { font-size: 1.2rem; padding: 12px 30px; }
         }
     </style>
 </head>
@@ -374,10 +443,20 @@
             <div class="grid-line" style="bottom: 50%"></div>
             <div class="grid-line" style="bottom: 75%"></div>
         </div>
+        
         <div class="pitch-visualizer">
             <div class="target-line"></div>
             <div class="user-pitch-cursor" id="pitch-cursor"></div>
         </div>
+
+        <div class="intro-overlay" id="intro-overlay">
+            <div class="intro-card">
+                <h2>準備好了嗎？<br>這題共有 <span id="intro-count" style="color: #FF5252; font-size: 2.8rem;">3</span> 個音！</h2>
+                <p>請先聽聽看題目示範音，<br>接著再一個個哼唱，<br>讓游標對準並變成綠色即可過關喔！</p>
+                <button class="btn-start-game" id="btn-start-game">開始聽題 🎵</button>
+            </div>
+        </div>
+
         <div class="success-overlay" id="success-overlay">
             <h1>🎉 太棒了！🎉</h1>
             <button class="btn-massive" id="next-seq-btn">挑戰下一題 ➔</button>
@@ -399,6 +478,11 @@
             const successOverlay = document.getElementById('success-overlay');
             const nextSeqBtn = document.getElementById('next-seq-btn');
             
+            // 新增的提示卡元素
+            const introOverlay = document.getElementById('intro-overlay');
+            const introCount = document.getElementById('intro-count');
+            const btnStartGame = document.getElementById('btn-start-game');
+            
             const minNoteSelect = document.getElementById('min-note');
             const maxNoteSelect = document.getElementById('max-note');
             const noteCountSelect = document.getElementById('note-count');
@@ -412,6 +496,7 @@
             let isDetecting = false;
             let isSequenceComplete = false;
             let isTransitioning = false; 
+            let isGameStarted = false; // 新增：控制是否正式進入遊戲環節
             
             let currentSequence = []; 
             let currentTargetIndex = 0; 
@@ -483,10 +568,26 @@
                 playSimpleTone(midiToFreq(midi), now, 1.0);
             }
 
+            // --- 獨立出連續播放功能，方便按鈕呼叫 ---
+            function playFullSequence() {
+                initAudio();
+                if (audioContext.state === 'suspended') audioContext.resume();
+                
+                let startTime = audioContext.currentTime;
+                const noteDuration = 1.0; 
+                const gapDuration = 0.3;  
+                
+                currentSequence.forEach((midi, index) => {
+                    let playTime = startTime + (index * (noteDuration + gapDuration));
+                    playSimpleTone(midiToFreq(midi), playTime, noteDuration);
+                });
+            }
+
             function generateSequence() {
                 successOverlay.classList.remove('show');
                 isSequenceComplete = false; 
                 isTransitioning = false; 
+                isGameStarted = false; // 遊戲尚未開始
                 
                 const minMidi = parseInt(minNoteSelect.value);
                 const maxMidi = parseInt(maxNoteSelect.value);
@@ -524,6 +625,10 @@
 
                 currentTargetIndex = 0;
                 setTargetNote(0);
+
+                // 設定並顯示提示小卡
+                introCount.textContent = count;
+                introOverlay.classList.add('show');
             }
 
             function setTargetNote(index) {
@@ -532,20 +637,21 @@
                 
                 for (let i = 0; i < currentSequence.length; i++) {
                     let dot = document.getElementById(`dot-${i}`);
-                    dot.classList.remove('active');
-                    if (i < index) {
+                    if(dot) dot.classList.remove('active');
+                    if (i < index && dot) {
                         dot.classList.add('done'); 
                     }
                 }
                 
-                if (index < currentSequence.length) {
-                    document.getElementById(`dot-${index}`).classList.add('active'); 
-                }
+                let targetDot = document.getElementById(`dot-${index}`);
+                if (targetDot) targetDot.classList.add('active'); 
             }
 
+            // 初始化設定
             populateNoteSelectors();
             generateSequence();
 
+            // 事件綁定
             minNoteSelect.addEventListener('change', generateSequence);
             maxNoteSelect.addEventListener('change', generateSequence);
             noteCountSelect.addEventListener('change', generateSequence);
@@ -556,18 +662,13 @@
                 if (micGainNode) micGainNode.gain.value = parseFloat(e.target.value);
             });
 
-            playBtn.addEventListener('click', () => {
-                initAudio();
-                if (audioContext.state === 'suspended') audioContext.resume();
-                
-                let startTime = audioContext.currentTime;
-                const noteDuration = 1.0; 
-                const gapDuration = 0.3;  
-                
-                currentSequence.forEach((midi, index) => {
-                    let playTime = startTime + (index * (noteDuration + gapDuration));
-                    playSimpleTone(midiToFreq(midi), playTime, noteDuration);
-                });
+            playBtn.addEventListener('click', playFullSequence);
+
+            // --- 新增：提示小卡「開始聽題」點擊事件 ---
+            btnStartGame.addEventListener('click', () => {
+                introOverlay.classList.remove('show');
+                isGameStarted = true; // 解除鎖定，允許麥克風開始偵測
+                playFullSequence();   // 自動播放這題的示範音
             });
 
             startMicBtn.addEventListener('click', async () => {
@@ -602,7 +703,8 @@
             function updatePitch() {
                 requestAnimationFrame(updatePitch);
 
-                if (!isDetecting || isSequenceComplete || isTransitioning) {
+                // 加入 isGameStarted 判斷，在點擊「開始聽題」之前不作動
+                if (!isDetecting || isSequenceComplete || isTransitioning || !isGameStarted) {
                     return;
                 }
 
@@ -613,7 +715,6 @@
                 
                 volumeLevel.style.width = Math.min(100, rms * 100 * 5) + '%';
 
-                // 【修正：稍微調降啟動音量門檻，讓正常音量就能喚醒游標】
                 if (rms > 0.004) { 
                     pitchCursor.classList.add('active');
                     let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
@@ -678,7 +779,6 @@
                 let maxval = -1, maxpos = -1;
                 for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
                 
-                // 【修正：放寬人聲純度門檻，讓稍微帶有氣音的人聲也能順利被偵測到】
                 let clarity = maxval / c[0];
                 if (clarity < 0.75) {
                     return -1; 
