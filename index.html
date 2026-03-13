@@ -45,7 +45,7 @@
             box-shadow: 0 8px 0 rgba(0,0,0,0.05);
             flex-wrap: wrap; 
             gap: 15px;
-            z-index: 100; /* 確保選單在最上層 */
+            z-index: 100; 
         }
 
         .header-group {
@@ -116,7 +116,7 @@
 
         .sequence-container {
             position: relative;
-            width: 350px;
+            width: 350px; 
             height: 320px;
             background-color: var(--panel-bg);
             border-radius: 40px;
@@ -286,22 +286,22 @@
         .btn-start-game { background-color: #FFB74D; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #F57C00; transition: all 0.1s; }
         .btn-start-game:active { transform: translateY(8px); box-shadow: 0 0 0 #F57C00; }
 
-        /* 【修改重點 1】：縮小提示文字，並把它固定在畫面上方，不擋住圓點 */
+        /* 【修正：絕對不擋畫面的最高層提示文字】 */
         .action-prompt {
             position: fixed;
-            top: 110px; /* 放在選單列下方 */
+            top: 140px; /* 將位置移到選單列下方 */
             left: 50%;
             transform: translate(-50%, -20px);
             background-color: rgba(255, 82, 82, 0.95);
             color: white;
-            padding: 10px 25px; /* 縮小內距 */
+            padding: 10px 25px; 
             border-radius: 30px;
-            font-size: 1.5rem; /* 字體縮小 */
+            font-size: 1.5rem; 
             font-weight: 900;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15);
             opacity: 0;
             pointer-events: none;
-            z-index: 80;
+            z-index: 1000; /* 絕對置頂 */
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .action-prompt.show {
@@ -343,8 +343,8 @@
             .intro-card h2 { font-size: 1.6rem; }
             .intro-card p { font-size: 1rem; }
             .btn-start-game { font-size: 1.2rem; padding: 12px 30px; }
-            /* 手機版將提示文字再調小 */
-            .action-prompt { font-size: 1.2rem; padding: 8px 20px; top: 150px; }
+            /* 手機版因為選單變長，提示框再往下移 */
+            .action-prompt { font-size: 1.2rem; padding: 8px 20px; top: 180px; } 
         }
     </style>
 </head>
@@ -411,7 +411,7 @@
     </main>
 
     <footer>
-        <button class="btn-play" id="play-btn">🎵 重新聽一次題目</button>
+        <button class="btn-play" id="play-btn">🎵 重新聽一次全題</button>
     </footer>
 
     <script>
@@ -444,6 +444,7 @@
             let isSequenceComplete = false;
             let isTransitioning = false; 
             let isListeningToUser = false; 
+            let currentSequenceId = 0; // 用來防止舊的定時器干擾新題目
             
             let currentSequence = []; 
             let currentTargetIndex = 0; 
@@ -490,30 +491,24 @@
                 }
             }
 
-            // 【修改重點 2：特製木琴音色 (Xylophone)】
             function playXylophoneTone(freq, startTime, duration) {
-                // 1. 主音色 (負責提供穩定的頻率讓你對準音高)
                 const osc = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
-                
-                // 2. 敲擊聲 (負責製造木頭的清脆聲響)
                 const clickOsc = audioContext.createOscillator();
                 const clickGain = audioContext.createGain();
                 
-                osc.type = 'sine'; // 主音用純淨的正弦波
+                osc.type = 'sine'; 
                 osc.frequency.value = freq;
                 
-                clickOsc.type = 'triangle'; // 敲擊聲用稍微鋒利的三角波，並調高音頻
+                clickOsc.type = 'triangle'; 
                 clickOsc.frequency.value = freq * 2.5; 
 
-                // 主音色包絡線：快速響起 -> 稍微下降 -> 穩定維持 3 秒 -> 最後收尾
                 gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.linearRampToValueAtTime(0.4, startTime + 0.02); // Attack (瞬間響起)
-                gainNode.gain.exponentialRampToValueAtTime(0.2, startTime + 0.2); // Decay (稍微減弱)
-                gainNode.gain.setValueAtTime(0.2, startTime + duration - 0.3); // Sustain (維持)
-                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration); // Release (結束)
+                gainNode.gain.linearRampToValueAtTime(0.4, startTime + 0.02); 
+                gainNode.gain.exponentialRampToValueAtTime(0.2, startTime + 0.2); 
+                gainNode.gain.setValueAtTime(0.2, startTime + duration - 0.3); 
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration); 
                 
-                // 敲擊聲包絡線：非常短促的「咚」一聲 (0.05秒內結束)
                 clickGain.gain.setValueAtTime(0, startTime);
                 clickGain.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
                 clickGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.05);
@@ -526,7 +521,7 @@
                 osc.start(startTime);
                 osc.stop(startTime + duration);
                 clickOsc.start(startTime);
-                clickOsc.stop(startTime + 0.1); // 敲擊聲瞬間結束
+                clickOsc.stop(startTime + 0.1); 
             }
 
             function showActionPrompt(msg) {
@@ -534,19 +529,44 @@
                 actionPrompt.classList.add('show');
                 setTimeout(() => {
                     actionPrompt.classList.remove('show');
-                }, 2000);
+                }, 2500);
             }
 
+            // 【新增：遊戲開始後，專門用來為單顆音符伴奏 3 秒的函數】
+            function playTargetNoteForGameplay(index) {
+                let midi = currentSequence[index];
+                if (!midi) return;
+
+                let dot = document.getElementById(`dot-${index}`);
+                if (dot) dot.classList.add('demo-playing');
+
+                initAudio();
+                if (audioContext.state === 'suspended') audioContext.resume();
+
+                isListeningToUser = false; // 播放期間鎖定麥克風
+                const now = audioContext.currentTime;
+                playXylophoneTone(midiToFreq(midi), now, 3.0); // 播放 3 秒長音
+
+                let seqId = currentSequenceId;
+                // 3 秒後自動開啟麥克風讓學生唱
+                setTimeout(() => {
+                    if (dot) dot.classList.remove('demo-playing');
+                    // 確保學生沒有中途換題或過關
+                    if (seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
+                        isListeningToUser = true;
+                    }
+                }, 3000);
+            }
+
+            // 【更新：題目首播，每顆音 1 秒快速預覽】
             function playFullSequence(isInitialPlay = false) {
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
                 
                 isListeningToUser = false; 
-                
                 let startTime = audioContext.currentTime;
-                // 【修改重點 3：連續播放改為 3 秒鐘】
-                const noteDuration = 3.0; 
-                const gapDuration = 0.5;  
+                const noteDuration = 1.0; // 第一次聽題只播 1 秒
+                const gapDuration = 0.3;  
                 
                 currentSequence.forEach((midi, index) => {
                     let playTime = startTime + (index * (noteDuration + gapDuration));
@@ -566,11 +586,13 @@
                     dots.forEach(d => d.classList.remove('demo-playing'));
 
                     if (isInitialPlay) {
-                        showActionPrompt("🎤 換你了！請開始哼唱");
+                        showActionPrompt("🎤 換你了！請聽完音後開始哼唱");
                         currentTargetIndex = 0;
                         setTargetNote(0);
-                        isListeningToUser = true;
+                        // 聽題結束後，自動拉長播放第一顆音 (3秒) 並準備收音
+                        playTargetNoteForGameplay(0);
                     } else {
+                        // 只是重新聽一次，播完回到原本的進度並恢復收音
                         setTargetNote(currentTargetIndex);
                         if (!isSequenceComplete) isListeningToUser = true;
                     }
@@ -585,13 +607,13 @@
                 isListeningToUser = false;
                 
                 const now = audioContext.currentTime;
-                // 單點播放也改為 3 秒鐘的木琴音色
-                playXylophoneTone(midiToFreq(midi), now, 3.0);
+                playXylophoneTone(midiToFreq(midi), now, 3.0); // 手動點擊也播放 3 秒讓學生聽清楚
                 
                 setTimeout(() => { isListeningToUser = previousState; }, 3000);
             }
 
             function generateSequence() {
+                currentSequenceId++; // 更新題目 ID，防止舊的定時器干擾
                 successOverlay.classList.remove('show');
                 isSequenceComplete = false; 
                 isTransitioning = false; 
@@ -757,11 +779,15 @@
                                     document.getElementById(`wrapper-${currentTargetIndex-1}`).classList.remove('is-active'); 
                                     successOverlay.classList.add('show');
                                 } else {
+                                    // 【更新：過關後自動播放下一顆音】
                                     isTransitioning = true; 
+                                    isListeningToUser = false; // 暫停麥克風
                                     setTimeout(() => {
                                         setTargetNote(currentTargetIndex);
                                         pitchCursor.classList.remove('perfect');
                                         isTransitioning = false; 
+                                        // 為下一題播放 3 秒長音
+                                        playTargetNoteForGameplay(currentTargetIndex);
                                     }, 500);
                                 }
                             }
