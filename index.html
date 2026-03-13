@@ -69,11 +69,7 @@
             text-align: center;
             transition: border-color 0.3s;
         }
-        select:focus, input[type="number"]:focus {
-            outline: none;
-            border-color: var(--warning-color);
-        }
-
+        select:focus, input[type="number"]:focus { outline: none; border-color: var(--warning-color); }
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"] { width: 60px; -moz-appearance: textfield; }
         input[type="range"] { width: 90px; cursor: pointer; accent-color: var(--warning-color); }
@@ -100,42 +96,12 @@
             box-shadow: 0 5px 0 #D32F2F;
             transition: all 0.1s;
         }
-        .btn-start-mic:active {
-            transform: translateY(5px);
-            box-shadow: 0 0 0 #D32F2F;
-        }
+        .btn-start-mic:active { transform: translateY(5px); box-shadow: 0 0 0 #D32F2F; }
 
-        .mic-active-ui {
-            display: none; 
-            align-items: center;
-            gap: 8px;
-            font-size: 1rem;
-            color: #757575;
-            font-weight: 900;
-        }
-
-        .mic-icon-green {
-            width: 14px;
-            height: 14px;
-            background-color: var(--accent-color); 
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--accent-color);
-        }
-
-        .volume-bar-container {
-            width: 60px;
-            height: 12px;
-            background-color: #E0E0E0;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        .volume-bar-fill {
-            height: 100%;
-            width: 0%; 
-            background-color: var(--accent-color);
-            transition: width 0.05s ease-out;
-            border-radius: 6px;
-        }
+        .mic-active-ui { display: none; align-items: center; gap: 8px; font-size: 1rem; color: #757575; font-weight: 900; }
+        .mic-icon-green { width: 14px; height: 14px; background-color: var(--accent-color); border-radius: 50%; box-shadow: 0 0 8px var(--accent-color); }
+        .volume-bar-container { width: 60px; height: 12px; background-color: #E0E0E0; border-radius: 6px; overflow: hidden; }
+        .volume-bar-fill { height: 100%; width: 0%; background-color: var(--accent-color); transition: width 0.05s ease-out; border-radius: 6px; }
 
         main {
             flex: 1;
@@ -150,7 +116,7 @@
 
         .sequence-container {
             position: relative;
-            width: 320px;
+            width: 350px; /* 稍微加寬 */
             height: 320px;
             background-color: var(--panel-bg);
             border-radius: 40px;
@@ -175,13 +141,35 @@
 
         .note-dot-wrapper {
             position: relative;
-            width: 60px;
+            width: 75px;
             height: 100%;
             z-index: 1;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
             align-items: center;
+        }
+
+        /* 新增：跳動的手指箭頭 */
+        .arrow-indicator {
+            position: absolute;
+            top: -60px; 
+            font-size: 2.5rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            animation: bounce 1s infinite;
+            z-index: 5;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
+        }
+
+        .note-dot-wrapper.is-active .arrow-indicator {
+            opacity: 1;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
         }
 
         .note-dot {
@@ -217,6 +205,15 @@
             border-color: #00897B;
             color: #FFF;
             transform: translateY(50%) scale(1);
+        }
+
+        /* 新增：電腦示範播放時的亮起特效 */
+        .note-dot.demo-playing {
+            background-color: #81D4FA !important;
+            border-color: #039BE5 !important;
+            transform: translateY(50%) scale(1.15) !important;
+            color: #FFF !important;
+            box-shadow: 0 5px 15px rgba(3, 155, 229, 0.5) !important;
         }
 
         .pitch-visualizer {
@@ -256,15 +253,10 @@
             z-index: 3;
             border: 4px solid #FFF;
         }
-        
         .user-pitch-cursor.active { opacity: 1; }
-        .user-pitch-cursor.perfect {
-            background-color: var(--accent-color);
-            box-shadow: 0 5px 20px rgba(77, 182, 172, 0.6);
-            transform: translateY(50%) scale(1.2);
-        }
+        .user-pitch-cursor.perfect { background-color: var(--accent-color); box-shadow: 0 5px 20px rgba(77, 182, 172, 0.6); transform: translateY(50%) scale(1.2); }
 
-        /* --- 新增：遊戲開始前的提示卡懸浮視窗 --- */
+        /* 遊戲提示卡 */
         .intro-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -278,10 +270,7 @@
             pointer-events: none;
             transition: opacity 0.3s;
         }
-        .intro-overlay.show {
-            opacity: 1;
-            pointer-events: all;
-        }
+        .intro-overlay.show { opacity: 1; pointer-events: all; }
         .intro-card {
             background-color: white;
             padding: 35px 40px;
@@ -294,42 +283,34 @@
             transform: scale(0.8);
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .intro-overlay.show .intro-card {
-            transform: scale(1);
-        }
-        .intro-card h2 {
-            font-size: 2.2rem;
-            color: var(--text-color);
-            margin-top: 0;
-            margin-bottom: 15px;
-            line-height: 1.4;
-        }
-        .intro-card p {
-            font-size: 1.2rem;
-            color: #795548;
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
+        .intro-overlay.show .intro-card { transform: scale(1); }
+        .intro-card h2 { font-size: 2.2rem; color: var(--text-color); margin-top: 0; margin-bottom: 15px; line-height: 1.4; }
+        .intro-card p { font-size: 1.2rem; color: #795548; margin-bottom: 30px; line-height: 1.6; }
+        .btn-start-game { background-color: #FFB74D; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #F57C00; transition: all 0.1s; }
+        .btn-start-game:active { transform: translateY(8px); box-shadow: 0 0 0 #F57C00; }
 
-        .btn-start-game {
-            background-color: #FFB74D; 
+        /* 新增：請開始哼唱的彈出提示文字 */
+        .action-prompt {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background-color: rgba(255, 82, 82, 0.95);
             color: white;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            font-weight: 900;
-            font-family: inherit;
-            border: none;
+            padding: 20px 40px;
             border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 8px 0 #F57C00;
-            transition: all 0.1s;
+            font-size: 2.5rem;
+            font-weight: 900;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 80;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .btn-start-game:active {
-            transform: translateY(8px);
-            box-shadow: 0 0 0 #F57C00;
+        .action-prompt.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
         }
 
-        /* --- 原本的過關畫面 --- */
         .success-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -344,49 +325,13 @@
             transition: opacity 0.4s;
         }
         .success-overlay.show { opacity: 1; pointer-events: all; }
-        .success-overlay h1 {
-            font-size: 5rem;
-            color: #FF5252;
-            text-shadow: 0 5px 0 #D32F2F;
-            margin-bottom: 40px;
-            transform: scale(0.5);
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .success-overlay h1 { font-size: 5rem; color: #FF5252; text-shadow: 0 5px 0 #D32F2F; margin-bottom: 40px; transform: scale(0.5); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .success-overlay.show h1 { transform: scale(1) rotate(-5deg); }
 
-        footer {
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            z-index: 10;
-            margin-bottom: 10px;
-        }
-
-        .btn-play, .btn-massive {
-            background-color: #29B6F6; 
-            color: white;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            font-weight: 900;
-            font-family: inherit;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 8px 0 #0288D1;
-            transition: all 0.1s;
-        }
-        .btn-play:active, .btn-massive:active {
-            transform: translateY(8px);
-            box-shadow: 0 0 0 #0288D1;
-        }
-        
-        .btn-massive {
-            background-color: #66BB6A; 
-            box-shadow: 0 8px 0 #388E3C;
-            font-size: 2rem;
-            padding: 20px 60px;
-        }
+        footer { padding: 15px; display: flex; justify-content: center; gap: 20px; z-index: 10; margin-bottom: 10px; }
+        .btn-play, .btn-massive { background-color: #29B6F6; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #0288D1; transition: all 0.1s; }
+        .btn-play:active, .btn-massive:active { transform: translateY(8px); box-shadow: 0 0 0 #0288D1; }
+        .btn-massive { background-color: #66BB6A; box-shadow: 0 8px 0 #388E3C; font-size: 2rem; padding: 20px 60px; }
         .btn-massive:active { box-shadow: 0 0 0 #388E3C; }
 
         @media (max-width: 820px) {
@@ -400,6 +345,7 @@
             .intro-card h2 { font-size: 1.6rem; }
             .intro-card p { font-size: 1rem; }
             .btn-start-game { font-size: 1.2rem; padding: 12px 30px; }
+            .action-prompt { font-size: 1.8rem; padding: 15px 30px; }
         }
     </style>
 </head>
@@ -452,10 +398,12 @@
         <div class="intro-overlay" id="intro-overlay">
             <div class="intro-card">
                 <h2>準備好了嗎？<br>這題共有 <span id="intro-count" style="color: #FF5252; font-size: 2.8rem;">3</span> 個音！</h2>
-                <p>請先聽聽看題目示範音，<br>接著再一個個哼唱，<br>讓游標對準並變成綠色即可過關喔！</p>
+                <p>請先聽聽看題目示範音，<br>接著再跟著箭頭一個個哼唱，<br>讓游標變成綠色即可過關喔！</p>
                 <button class="btn-start-game" id="btn-start-game">開始聽題 🎵</button>
             </div>
         </div>
+
+        <div id="action-prompt" class="action-prompt">🎤 換你了！請開始哼唱</div>
 
         <div class="success-overlay" id="success-overlay">
             <h1>🎉 太棒了！🎉</h1>
@@ -464,7 +412,7 @@
     </main>
 
     <footer>
-        <button class="btn-play" id="play-btn">🎵 聽聽看示範音</button>
+        <button class="btn-play" id="play-btn">🎵 重新聽一次題目</button>
     </footer>
 
     <script>
@@ -478,10 +426,10 @@
             const successOverlay = document.getElementById('success-overlay');
             const nextSeqBtn = document.getElementById('next-seq-btn');
             
-            // 新增的提示卡元素
             const introOverlay = document.getElementById('intro-overlay');
             const introCount = document.getElementById('intro-count');
             const btnStartGame = document.getElementById('btn-start-game');
+            const actionPrompt = document.getElementById('action-prompt');
             
             const minNoteSelect = document.getElementById('min-note');
             const maxNoteSelect = document.getElementById('max-note');
@@ -496,7 +444,7 @@
             let isDetecting = false;
             let isSequenceComplete = false;
             let isTransitioning = false; 
-            let isGameStarted = false; // 新增：控制是否正式進入遊戲環節
+            let isListeningToUser = false; // 控制麥克風何時該對聲音做出反應
             
             let currentSequence = []; 
             let currentTargetIndex = 0; 
@@ -561,17 +509,21 @@
                 oscillator.stop(startTime + duration);
             }
 
-            function playSingleNote(midi) {
-                initAudio();
-                if (audioContext.state === 'suspended') audioContext.resume();
-                const now = audioContext.currentTime;
-                playSimpleTone(midiToFreq(midi), now, 1.0);
+            function showActionPrompt(msg) {
+                actionPrompt.textContent = msg;
+                actionPrompt.classList.add('show');
+                setTimeout(() => {
+                    actionPrompt.classList.remove('show');
+                }, 2000);
             }
 
-            // --- 獨立出連續播放功能，方便按鈕呼叫 ---
-            function playFullSequence() {
+            // 【核心更新：連續播放邏輯，加入動態點亮與開始提示】
+            function playFullSequence(isInitialPlay = false) {
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
+                
+                // 播放時鎖定麥克風，避免收到電腦發出的聲音
+                isListeningToUser = false; 
                 
                 let startTime = audioContext.currentTime;
                 const noteDuration = 1.0; 
@@ -580,14 +532,56 @@
                 currentSequence.forEach((midi, index) => {
                     let playTime = startTime + (index * (noteDuration + gapDuration));
                     playSimpleTone(midiToFreq(midi), playTime, noteDuration);
+
+                    // 在播放該音符時，讓對應的圓點亮起藍色
+                    setTimeout(() => {
+                        let dots = document.querySelectorAll('.note-dot');
+                        dots.forEach(d => d.classList.remove('demo-playing'));
+                        if(dots[index]) dots[index].classList.add('demo-playing');
+                    }, index * (noteDuration + gapDuration) * 1000);
                 });
+
+                // 計算整段音樂播完的時間
+                let totalTime = currentSequence.length * (noteDuration + gapDuration) * 1000;
+                
+                setTimeout(() => {
+                    // 移除所有藍色亮光
+                    let dots = document.querySelectorAll('.note-dot');
+                    dots.forEach(d => d.classList.remove('demo-playing'));
+
+                    if (isInitialPlay) {
+                        // 首次聽題結束：秀出提示字、將箭頭指到第一個音、開啟麥克風偵測
+                        showActionPrompt("🎤 換你了！請開始哼唱");
+                        currentTargetIndex = 0;
+                        setTargetNote(0);
+                        isListeningToUser = true;
+                    } else {
+                        // 如果只是中途「重新聽一次題目」，播完後恢復原本的進度與麥克風
+                        setTargetNote(currentTargetIndex);
+                        if (!isSequenceComplete) isListeningToUser = true;
+                    }
+                }, totalTime);
+            }
+
+            function playSingleNote(midi) {
+                initAudio();
+                if (audioContext.state === 'suspended') audioContext.resume();
+                
+                // 暫時鎖定麥克風 1 秒
+                let previousState = isListeningToUser;
+                isListeningToUser = false;
+                
+                const now = audioContext.currentTime;
+                playSimpleTone(midiToFreq(midi), now, 1.0);
+                
+                setTimeout(() => { isListeningToUser = previousState; }, 1000);
             }
 
             function generateSequence() {
                 successOverlay.classList.remove('show');
                 isSequenceComplete = false; 
                 isTransitioning = false; 
-                isGameStarted = false; // 遊戲尚未開始
+                isListeningToUser = false; // 出題時先不開啟麥克風
                 
                 const minMidi = parseInt(minNoteSelect.value);
                 const maxMidi = parseInt(maxNoteSelect.value);
@@ -610,6 +604,12 @@
 
                     let wrapper = document.createElement('div');
                     wrapper.className = 'note-dot-wrapper';
+                    wrapper.id = `wrapper-${i}`;
+                    
+                    // 建立小箭頭 (預設隱藏)
+                    let arrow = document.createElement('div');
+                    arrow.className = 'arrow-indicator';
+                    arrow.textContent = '👇';
                     
                     let dot = document.createElement('div');
                     dot.className = 'note-dot';
@@ -619,39 +619,45 @@
                     
                     dot.addEventListener('click', () => { playSingleNote(noteMidi); });
                     
+                    wrapper.appendChild(arrow);
                     wrapper.appendChild(dot);
                     sequenceDisplay.appendChild(wrapper);
                 }
 
                 currentTargetIndex = 0;
-                setTargetNote(0);
-
-                // 設定並顯示提示小卡
+                
+                // 顯示開始前的提示卡
                 introCount.textContent = count;
                 introOverlay.classList.add('show');
             }
 
+            // 更新目標音與箭頭位置
             function setTargetNote(index) {
                 targetFreq = midiToFreq(currentSequence[index]);
                 matchFrames = 0;
                 
+                // 清除所有狀態
                 for (let i = 0; i < currentSequence.length; i++) {
                     let dot = document.getElementById(`dot-${i}`);
+                    let wrapper = document.getElementById(`wrapper-${i}`);
                     if(dot) dot.classList.remove('active');
+                    if(wrapper) wrapper.classList.remove('is-active');
+                    
                     if (i < index && dot) {
                         dot.classList.add('done'); 
                     }
                 }
                 
+                // 點亮當前目標與箭頭
                 let targetDot = document.getElementById(`dot-${index}`);
+                let targetWrapper = document.getElementById(`wrapper-${index}`);
                 if (targetDot) targetDot.classList.add('active'); 
+                if (targetWrapper) targetWrapper.classList.add('is-active');
             }
 
-            // 初始化設定
             populateNoteSelectors();
             generateSequence();
 
-            // 事件綁定
             minNoteSelect.addEventListener('change', generateSequence);
             maxNoteSelect.addEventListener('change', generateSequence);
             noteCountSelect.addEventListener('change', generateSequence);
@@ -662,13 +668,15 @@
                 if (micGainNode) micGainNode.gain.value = parseFloat(e.target.value);
             });
 
-            playBtn.addEventListener('click', playFullSequence);
-
-            // --- 新增：提示小卡「開始聽題」點擊事件 ---
+            // 點擊「開始聽題」
             btnStartGame.addEventListener('click', () => {
                 introOverlay.classList.remove('show');
-                isGameStarted = true; // 解除鎖定，允許麥克風開始偵測
-                playFullSequence();   // 自動播放這題的示範音
+                playFullSequence(true); // 傳入 true，表示這是這題的第一次播放
+            });
+
+            // 點擊「重新聽一次」
+            playBtn.addEventListener('click', () => {
+                playFullSequence(false); // 傳入 false，播完不會觸發「換你了」動畫
             });
 
             startMicBtn.addEventListener('click', async () => {
@@ -703,8 +711,8 @@
             function updatePitch() {
                 requestAnimationFrame(updatePitch);
 
-                // 加入 isGameStarted 判斷，在點擊「開始聽題」之前不作動
-                if (!isDetecting || isSequenceComplete || isTransitioning || !isGameStarted) {
+                // 檢查 isListeningToUser，確保電腦在播放示範音時麥克風是「閉上耳朵」的
+                if (!isDetecting || isSequenceComplete || isTransitioning || !isListeningToUser) {
                     return;
                 }
 
@@ -740,6 +748,7 @@
                                     isSequenceComplete = true; 
                                     document.getElementById(`dot-${currentTargetIndex-1}`).classList.add('done');
                                     document.getElementById(`dot-${currentTargetIndex-1}`).classList.remove('active');
+                                    document.getElementById(`wrapper-${currentTargetIndex-1}`).classList.remove('is-active'); // 隱藏最後一個箭頭
                                     successOverlay.classList.add('show');
                                 } else {
                                     isTransitioning = true; 
