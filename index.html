@@ -286,10 +286,9 @@
         .btn-start-game { background-color: #FFB74D; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #F57C00; transition: all 0.1s; }
         .btn-start-game:active { transform: translateY(8px); box-shadow: 0 0 0 #F57C00; }
 
-        /* 【修正：絕對不擋畫面的最高層提示文字】 */
         .action-prompt {
             position: fixed;
-            top: 140px; /* 將位置移到選單列下方 */
+            top: 140px; 
             left: 50%;
             transform: translate(-50%, -20px);
             background-color: rgba(255, 82, 82, 0.95);
@@ -301,7 +300,7 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.15);
             opacity: 0;
             pointer-events: none;
-            z-index: 1000; /* 絕對置頂 */
+            z-index: 1000; 
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .action-prompt.show {
@@ -343,7 +342,6 @@
             .intro-card h2 { font-size: 1.6rem; }
             .intro-card p { font-size: 1rem; }
             .btn-start-game { font-size: 1.2rem; padding: 12px 30px; }
-            /* 手機版因為選單變長，提示框再往下移 */
             .action-prompt { font-size: 1.2rem; padding: 8px 20px; top: 180px; } 
         }
     </style>
@@ -369,7 +367,7 @@
         </div>
         <div class="header-group">
             <label>靈敏度：</label>
-            <input type="range" id="sensitivity-slider" min="1" max="15" value="5" step="0.5">
+            <input type="range" id="sensitivity-slider" min="1" max="15" value="8" step="0.5">
         </div>
         
         <div class="mic-status-container">
@@ -382,7 +380,7 @@
         </div>
     </header>
 
-    <div id="action-prompt" class="action-prompt">🎤 換你了！請開始哼唱</div>
+    <div id="action-prompt" class="action-prompt">🎤 換你了！請聽完音後開始哼唱</div>
 
     <main>
         <div class="sequence-container" id="sequence-display">
@@ -444,15 +442,17 @@
             let isSequenceComplete = false;
             let isTransitioning = false; 
             let isListeningToUser = false; 
-            let currentSequenceId = 0; // 用來防止舊的定時器干擾新題目
+            let currentSequenceId = 0; 
             
             let currentSequence = []; 
             let currentTargetIndex = 0; 
             let targetFreq = 261.63; 
             
             let matchFrames = 0; 
-            const REQUIRED_FRAMES = 20; 
-            const CENTS_TOLERANCE = 35; 
+            // 【放寬條件】：只需要維持 12 幀 (約 0.2 秒) 就過關，不刁難初學者
+            const REQUIRED_FRAMES = 12; 
+            // 【放寬條件】：容錯音分稍微拉大到 45
+            const CENTS_TOLERANCE = 45; 
             let smoothedPosition = 50; 
 
             function midiToNoteName(midi) {
@@ -532,7 +532,6 @@
                 }, 2500);
             }
 
-            // 【新增：遊戲開始後，專門用來為單顆音符伴奏 3 秒的函數】
             function playTargetNoteForGameplay(index) {
                 let midi = currentSequence[index];
                 if (!midi) return;
@@ -543,29 +542,26 @@
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
 
-                isListeningToUser = false; // 播放期間鎖定麥克風
+                isListeningToUser = false; 
                 const now = audioContext.currentTime;
-                playXylophoneTone(midiToFreq(midi), now, 3.0); // 播放 3 秒長音
+                playXylophoneTone(midiToFreq(midi), now, 3.0); 
 
                 let seqId = currentSequenceId;
-                // 3 秒後自動開啟麥克風讓學生唱
                 setTimeout(() => {
                     if (dot) dot.classList.remove('demo-playing');
-                    // 確保學生沒有中途換題或過關
                     if (seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
                         isListeningToUser = true;
                     }
                 }, 3000);
             }
 
-            // 【更新：題目首播，每顆音 1 秒快速預覽】
             function playFullSequence(isInitialPlay = false) {
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
                 
                 isListeningToUser = false; 
                 let startTime = audioContext.currentTime;
-                const noteDuration = 1.0; // 第一次聽題只播 1 秒
+                const noteDuration = 1.0; 
                 const gapDuration = 0.3;  
                 
                 currentSequence.forEach((midi, index) => {
@@ -589,10 +585,8 @@
                         showActionPrompt("🎤 換你了！請聽完音後開始哼唱");
                         currentTargetIndex = 0;
                         setTargetNote(0);
-                        // 聽題結束後，自動拉長播放第一顆音 (3秒) 並準備收音
                         playTargetNoteForGameplay(0);
                     } else {
-                        // 只是重新聽一次，播完回到原本的進度並恢復收音
                         setTargetNote(currentTargetIndex);
                         if (!isSequenceComplete) isListeningToUser = true;
                     }
@@ -607,13 +601,13 @@
                 isListeningToUser = false;
                 
                 const now = audioContext.currentTime;
-                playXylophoneTone(midiToFreq(midi), now, 3.0); // 手動點擊也播放 3 秒讓學生聽清楚
+                playXylophoneTone(midiToFreq(midi), now, 3.0); 
                 
                 setTimeout(() => { isListeningToUser = previousState; }, 3000);
             }
 
             function generateSequence() {
-                currentSequenceId++; // 更新題目 ID，防止舊的定時器干擾
+                currentSequenceId++; 
                 successOverlay.classList.remove('show');
                 isSequenceComplete = false; 
                 isTransitioning = false; 
@@ -712,8 +706,9 @@
                 try {
                     startMicBtn.textContent = '連線中...';
                     initAudio();
+                    // 【解除自動增益限制】：讓平板發揮原生的麥克風增強功能
                     const stream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+                        audio: { echoCancellation: false, noiseSuppression: false } 
                     }); 
                     
                     startMicBtn.style.display = 'none';
@@ -751,7 +746,8 @@
                 
                 volumeLevel.style.width = Math.min(100, rms * 100 * 5) + '%';
 
-                if (rms > 0.004) { 
+                // 【放寬音量門檻】：只要有一點點聲音就啟動游標
+                if (rms > 0.0015) { 
                     pitchCursor.classList.add('active');
                     let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
                     
@@ -779,14 +775,12 @@
                                     document.getElementById(`wrapper-${currentTargetIndex-1}`).classList.remove('is-active'); 
                                     successOverlay.classList.add('show');
                                 } else {
-                                    // 【更新：過關後自動播放下一顆音】
                                     isTransitioning = true; 
-                                    isListeningToUser = false; // 暫停麥克風
+                                    isListeningToUser = false; 
                                     setTimeout(() => {
                                         setTargetNote(currentTargetIndex);
                                         pitchCursor.classList.remove('perfect');
                                         isTransitioning = false; 
-                                        // 為下一題播放 3 秒長音
                                         playTargetNoteForGameplay(currentTargetIndex);
                                     }, 500);
                                 }
@@ -821,7 +815,8 @@
                 for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
                 
                 let clarity = maxval / c[0];
-                if (clarity < 0.75) {
+                // 【放寬純度門檻】：降到 0.5，允許更多氣音跟人聲摩擦音進入判定
+                if (clarity < 0.5) {
                     return -1; 
                 }
 
