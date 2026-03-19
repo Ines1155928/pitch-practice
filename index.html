@@ -94,10 +94,24 @@
         .grid-line { position: absolute; width: 90%; left: 5%; height: 3px; background-color: #F5F5F5; border-radius: 2px; z-index: 0; }
         .note-dot-wrapper { position: relative; width: 75px; height: 100%; z-index: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
         
-        .arrow-indicator { position: absolute; top: -60px; font-size: 2.5rem; opacity: 0; pointer-events: none; transition: opacity 0.3s; animation: bounce 1s infinite; z-index: 5; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); }
+        /* 【修改重點】：箭頭移到下方，改成往上彈跳 */
+        .arrow-indicator { 
+            position: absolute; 
+            bottom: -80px; /* 移到圓圈下方 */
+            font-size: 2.5rem; 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 0.3s; 
+            animation: bounce-up 1s infinite; 
+            z-index: 5; 
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); 
+        }
         .note-dot-wrapper.is-active .arrow-indicator { opacity: 1; }
 
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes bounce-up { 
+            0%, 100% { transform: translateY(0); } 
+            50% { transform: translateY(-10px); } /* 往上彈跳指向圓圈 */
+        }
 
         .note-dot {
             position: absolute;
@@ -204,7 +218,7 @@
 
         @media (max-width: 820px) {
             main { flex-direction: column; gap: 30px; }
-            .sequence-container { width: 90%; height: 250px; }
+            .sequence-container { width: 90%; height: 250px; margin-bottom: 30px; } /* 手機版多留一點底部空間給箭頭 */
             .pitch-visualizer { width: 90%; height: 60px; flex-direction: column; align-items: center; }
             .target-line { top: 0; left: 50%; width: 6px; height: 80px; transform: translateX(-50%); }
             .user-pitch-cursor { bottom: 0; left: var(--cursor-pos); transform: translateX(-50%); }
@@ -324,7 +338,7 @@
             const CENTS_TOLERANCE = 50; 
             let smoothedPosition = 50; 
             let previousFreq = 0; 
-            let promptTimeout; // 用來控制提示文字的時間
+            let promptTimeout; 
 
             const cMajorPitches = [0, 2, 4, 5, 7, 9, 11];
 
@@ -399,7 +413,6 @@
                 clickOsc.stop(startTime + 0.1); 
             }
 
-            // 【重點修改 1：動態換色的提示框系統】
             function showActionPrompt(msg, duration = 2500, bgColor = "rgba(255, 82, 82, 0.95)") {
                 actionPrompt.textContent = msg;
                 actionPrompt.style.backgroundColor = bgColor;
@@ -426,14 +439,12 @@
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
 
-                // 播放單音時的藍色引導提示
                 showActionPrompt("👂 聽聽看，跟著一起哼唱～", 3000, "rgba(3, 169, 244, 0.95)");
 
                 let seqId = currentSequenceId;
                 setTimeout(() => {
                     if (dot) dot.classList.remove('demo-playing');
                     if (seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
-                        // 播放完畢，紅色提示開始挑戰
                         showActionPrompt("🎤 換你了！將綠色能量集滿", 3000, "rgba(255, 82, 82, 0.95)");
                         isListeningToUser = true;
                     }
@@ -462,7 +473,6 @@
 
                 let totalTime = currentSequence.length * (noteDuration + gapDuration) * 1000;
                 
-                // 整段播放時的紫色提示
                 let promptMsg = isInitialPlay ? "🎵 請先聽一次完整題目" : "🎵 重新聽一次全題";
                 showActionPrompt(promptMsg, totalTime, "rgba(156, 39, 176, 0.95)");
                 
@@ -489,7 +499,6 @@
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
                 
-                // 點擊單音也給予藍色引導
                 showActionPrompt("👂 聽聽看，跟著一起哼唱～", 3000, "rgba(3, 169, 244, 0.95)");
 
                 setTimeout(() => { 
@@ -534,9 +543,10 @@
                     wrapper.className = 'note-dot-wrapper';
                     wrapper.id = `wrapper-${i}`;
                     
+                    // 【修改重點】：把小手指圖案改成往上指的，放在圓圈下方
                     let arrow = document.createElement('div');
                     arrow.className = 'arrow-indicator';
-                    arrow.textContent = '👇';
+                    arrow.textContent = '☝️'; 
                     
                     let dot = document.createElement('div');
                     dot.className = 'note-dot';
