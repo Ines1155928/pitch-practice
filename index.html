@@ -17,6 +17,7 @@
             --dot-color: #E0E0E0;      
             --active-dot-color: #FFF176; 
             --cursor-pos: 50%; 
+            --charge: 0%; /* 集氣進度變數 */
         }
 
         body {
@@ -48,54 +49,15 @@
             z-index: 100; 
         }
 
-        .header-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.1rem;
-            color: #795548;
-        }
-
-        select, input[type="number"] {
-            padding: 8px 12px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            font-family: inherit;
-            border-radius: 20px;
-            border: 3px solid #E0E0E0;
-            background-color: #FAFAFA;
-            color: var(--text-color);
-            cursor: pointer;
-            text-align: center;
-            transition: border-color 0.3s;
-        }
+        .header-group { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; color: #795548; }
+        select, input[type="number"] { padding: 8px 12px; font-size: 1.1rem; font-weight: 700; font-family: inherit; border-radius: 20px; border: 3px solid #E0E0E0; background-color: #FAFAFA; color: var(--text-color); cursor: pointer; text-align: center; transition: border-color 0.3s; }
         select:focus, input[type="number"]:focus { outline: none; border-color: var(--warning-color); }
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"] { width: 60px; -moz-appearance: textfield; }
         input[type="range"] { width: 90px; cursor: pointer; accent-color: var(--warning-color); }
 
-        .mic-status-container {
-            display: flex;
-            align-items: center;
-            background-color: #F5F5F5;
-            padding: 6px 12px;
-            border-radius: 30px;
-            border: 3px solid #EEEEEE;
-        }
-
-        .btn-start-mic {
-            background-color: #FF5252;
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 30px;
-            font-weight: 900;
-            cursor: pointer;
-            font-size: 1.1rem;
-            font-family: inherit;
-            box-shadow: 0 5px 0 #D32F2F;
-            transition: all 0.1s;
-        }
+        .mic-status-container { display: flex; align-items: center; background-color: #F5F5F5; padding: 6px 12px; border-radius: 30px; border: 3px solid #EEEEEE; }
+        .btn-start-mic { background-color: #FF5252; color: white; border: none; padding: 10px 18px; border-radius: 30px; font-weight: 900; cursor: pointer; font-size: 1.1rem; font-family: inherit; box-shadow: 0 5px 0 #D32F2F; transition: all 0.1s; }
         .btn-start-mic:active { transform: translateY(5px); box-shadow: 0 0 0 #D32F2F; }
 
         .mic-active-ui { display: none; align-items: center; gap: 8px; font-size: 1rem; color: #757575; font-weight: 900; }
@@ -129,42 +91,11 @@
             box-sizing: border-box;
         }
 
-        .grid-line {
-            position: absolute;
-            width: 90%;
-            left: 5%;
-            height: 3px;
-            background-color: #F5F5F5;
-            border-radius: 2px;
-            z-index: 0;
-        }
-
-        .note-dot-wrapper {
-            position: relative;
-            width: 75px;
-            height: 100%;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            align-items: center;
-        }
-
-        .arrow-indicator {
-            position: absolute;
-            top: -60px; 
-            font-size: 2.5rem;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            animation: bounce 1s infinite;
-            z-index: 5;
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
-        }
-
-        .note-dot-wrapper.is-active .arrow-indicator {
-            opacity: 1;
-        }
+        .grid-line { position: absolute; width: 90%; left: 5%; height: 3px; background-color: #F5F5F5; border-radius: 2px; z-index: 0; }
+        .note-dot-wrapper { position: relative; width: 75px; height: 100%; z-index: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+        
+        .arrow-indicator { position: absolute; top: -60px; font-size: 2.5rem; opacity: 0; pointer-events: none; transition: opacity 0.3s; animation: bounce 1s infinite; z-index: 5; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); }
+        .note-dot-wrapper.is-active .arrow-indicator { opacity: 1; }
 
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
@@ -190,29 +121,9 @@
         }
 
         .note-dot:active { transform: translateY(50%) scale(0.85); }
-
-        .note-dot.active {
-            background-color: var(--active-dot-color);
-            border-color: #FBC02D;
-            color: #5D4037;
-            transform: translateY(50%) scale(1.15);
-            box-shadow: 0 8px 15px rgba(255, 235, 59, 0.4);
-        }
-
-        .note-dot.done {
-            background-color: var(--accent-color);
-            border-color: #00897B;
-            color: #FFF;
-            transform: translateY(50%) scale(1);
-        }
-
-        .note-dot.demo-playing {
-            background-color: #81D4FA !important;
-            border-color: #039BE5 !important;
-            transform: translateY(50%) scale(1.15) !important;
-            color: #FFF !important;
-            box-shadow: 0 5px 15px rgba(3, 155, 229, 0.5) !important;
-        }
+        .note-dot.active { background-color: var(--active-dot-color); border-color: #FBC02D; color: #5D4037; transform: translateY(50%) scale(1.15); box-shadow: 0 8px 15px rgba(255, 235, 59, 0.4); }
+        .note-dot.done { background-color: var(--accent-color); border-color: #00897B; color: #FFF; transform: translateY(50%) scale(1); }
+        .note-dot.demo-playing { background-color: #81D4FA !important; border-color: #039BE5 !important; transform: translateY(50%) scale(1.15) !important; color: #FFF !important; box-shadow: 0 5px 15px rgba(3, 155, 229, 0.5) !important; }
 
         .pitch-visualizer {
             position: relative;
@@ -237,6 +148,7 @@
             z-index: 2;
         }
 
+        /* --- 修改：游標加入集氣注水特效 --- */
         .user-pitch-cursor {
             position: absolute;
             bottom: var(--cursor-pos); 
@@ -245,82 +157,48 @@
             background-color: var(--warning-color);
             border-radius: 50%;
             transform: translateY(50%); 
-            transition: bottom 0.1s linear, left 0.1s linear, background-color 0.3s;
+            transition: bottom 0.1s linear, left 0.1s linear;
             box-shadow: 0 5px 15px rgba(255, 138, 101, 0.5);
             opacity: 0.3; 
             z-index: 3;
             border: 4px solid #FFF;
+            overflow: hidden; /* 確保內部的注水不會超出圓形 */
         }
-        .user-pitch-cursor.active { opacity: 1; }
-        .user-pitch-cursor.perfect { background-color: var(--accent-color); box-shadow: 0 5px 20px rgba(77, 182, 172, 0.6); transform: translateY(50%) scale(1.2); }
-
-        .intro-overlay {
+        
+        /* 內部的集氣綠色水柱 */
+        .user-pitch-cursor::before {
+            content: '';
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(224, 247, 250, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 90;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
+            bottom: 0; 
+            left: 0; 
+            width: 100%;
+            height: var(--charge); /* 透過 JS 動態改變高度 */
+            background-color: var(--accent-color);
+            transition: height 0.1s linear;
+            z-index: -1;
         }
+
+        .user-pitch-cursor.active { opacity: 1; }
+        .user-pitch-cursor.perfect { 
+            background-color: var(--accent-color); 
+            box-shadow: 0 5px 20px rgba(77, 182, 172, 0.6); 
+            transform: translateY(50%) scale(1.2); 
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .intro-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(224, 247, 250, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .intro-overlay.show { opacity: 1; pointer-events: all; }
-        .intro-card {
-            background-color: white;
-            padding: 35px 40px;
-            border-radius: 40px;
-            border: 6px solid var(--border-color);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 80%;
-            max-width: 450px;
-            transform: scale(0.8);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .intro-card { background-color: white; padding: 35px 40px; border-radius: 40px; border: 6px solid var(--border-color); box-shadow: 0 15px 30px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 450px; transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .intro-overlay.show .intro-card { transform: scale(1); }
         .intro-card h2 { font-size: 2.2rem; color: var(--text-color); margin-top: 0; margin-bottom: 15px; line-height: 1.4; }
         .intro-card p { font-size: 1.2rem; color: #795548; margin-bottom: 30px; line-height: 1.6; }
         .btn-start-game { background-color: #FFB74D; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #F57C00; transition: all 0.1s; }
         .btn-start-game:active { transform: translateY(8px); box-shadow: 0 0 0 #F57C00; }
 
-        .action-prompt {
-            position: fixed;
-            top: 140px; 
-            left: 50%;
-            transform: translate(-50%, -20px);
-            background-color: rgba(255, 82, 82, 0.95);
-            color: white;
-            padding: 10px 25px; 
-            border-radius: 30px;
-            font-size: 1.5rem; 
-            font-weight: 900;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            opacity: 0;
-            pointer-events: none;
-            z-index: 1000; 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .action-prompt.show {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
+        .action-prompt { position: fixed; top: 140px; left: 50%; transform: translate(-50%, -20px); background-color: rgba(255, 82, 82, 0.95); color: white; padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; font-weight: 900; box-shadow: 0 10px 20px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; z-index: 1000; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .action-prompt.show { opacity: 1; transform: translate(-50%, 0); }
 
-        .success-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(255, 255, 255, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s;
-        }
+        .success-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
         .success-overlay.show { opacity: 1; pointer-events: all; }
         .success-overlay h1 { font-size: 5rem; color: #FF5252; text-shadow: 0 5px 0 #D32F2F; margin-bottom: 40px; transform: scale(0.5); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .success-overlay.show h1 { transform: scale(1) rotate(-5deg); }
@@ -397,7 +275,7 @@
         <div class="intro-overlay" id="intro-overlay">
             <div class="intro-card">
                 <h2>準備好了嗎？<br>這題共有 <span id="intro-count" style="color: #FF5252; font-size: 2.8rem;">3</span> 個音！</h2>
-                <p>請先聽聽看題目示範音，<br>接著再跟著箭頭一個個哼唱，<br>讓游標變成綠色即可過關喔！</p>
+                <p>請先聽聽看題目示範音，<br>接著再跟著箭頭一個個哼唱，<br>將游標裡的綠色能量集滿即可過關喔！</p>
                 <button class="btn-start-game" id="btn-start-game">開始聽題 🎵</button>
             </div>
         </div>
@@ -449,11 +327,15 @@
             let targetFreq = 261.63; 
             
             let matchFrames = 0; 
-            // 【放寬條件】：只需要維持 12 幀 (約 0.2 秒) 就過關，不刁難初學者
-            const REQUIRED_FRAMES = 12; 
-            // 【放寬條件】：容錯音分稍微拉大到 45
-            const CENTS_TOLERANCE = 45; 
+            
+            // 【修改重點 1：集氣時間與寬容度】
+            // 提高到 35 幀 (約需穩定唱 0.6 秒)，物理上阻絕講話過關的可能
+            const REQUIRED_FRAMES = 35; 
+            // 保持寬容的音分，給初學者找音準的空間
+            const CENTS_TOLERANCE = 50; 
             let smoothedPosition = 50; 
+
+            const cMajorPitches = [0, 2, 4, 5, 7, 9, 11];
 
             function midiToNoteName(midi) {
                 const noteNames = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
@@ -469,7 +351,9 @@
             function populateNoteSelectors() {
                 let optionsHtml = '';
                 for (let i = 48; i <= 84; i++) {
-                    optionsHtml += `<option value="${i}">${midiToNoteName(i)}</option>`;
+                    if (cMajorPitches.includes(i % 12)) {
+                        optionsHtml += `<option value="${i}">${midiToNoteName(i)}</option>`;
+                    }
                 }
                 minNoteSelect.innerHTML = optionsHtml;
                 maxNoteSelect.innerHTML = optionsHtml;
@@ -527,15 +411,12 @@
             function showActionPrompt(msg) {
                 actionPrompt.textContent = msg;
                 actionPrompt.classList.add('show');
-                setTimeout(() => {
-                    actionPrompt.classList.remove('show');
-                }, 2500);
+                setTimeout(() => { actionPrompt.classList.remove('show'); }, 2500);
             }
 
             function playTargetNoteForGameplay(index) {
                 let midi = currentSequence[index];
                 if (!midi) return;
-
                 let dot = document.getElementById(`dot-${index}`);
                 if (dot) dot.classList.add('demo-playing');
 
@@ -596,13 +477,10 @@
             function playSingleNote(midi) {
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
-                
                 let previousState = isListeningToUser;
                 isListeningToUser = false;
-                
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
-                
                 setTimeout(() => { isListeningToUser = previousState; }, 3000);
             }
 
@@ -619,18 +497,24 @@
                 const max = Math.max(minMidi, maxMidi);
                 const count = parseInt(noteCountSelect.value);
 
+                let validNotes = [];
+                for (let j = min; j <= max; j++) {
+                    if (cMajorPitches.includes(j % 12)) validNotes.push(j);
+                }
+
                 currentSequence = [];
                 const dots = sequenceDisplay.querySelectorAll('.note-dot-wrapper');
                 dots.forEach(dot => dot.remove());
 
                 for (let i = 0; i < count; i++) {
-                    let noteMidi = Math.floor(Math.random() * (max - min + 1)) + min;
+                    if (validNotes.length === 0) validNotes.push(60); 
+                    
+                    let randomIndex = Math.floor(Math.random() * validNotes.length);
+                    let noteMidi = validNotes[randomIndex];
                     currentSequence.push(noteMidi);
 
                     let heightPercent = 50;
-                    if (max > min) {
-                        heightPercent = ((noteMidi - min) / (max - min)) * 100;
-                    }
+                    if (max > min) heightPercent = ((noteMidi - min) / (max - min)) * 100;
 
                     let wrapper = document.createElement('div');
                     wrapper.className = 'note-dot-wrapper';
@@ -652,9 +536,7 @@
                     wrapper.appendChild(dot);
                     sequenceDisplay.appendChild(wrapper);
                 }
-
                 currentTargetIndex = 0;
-                
                 introCount.textContent = count;
                 introOverlay.classList.add('show');
             }
@@ -662,16 +544,15 @@
             function setTargetNote(index) {
                 targetFreq = midiToFreq(currentSequence[index]);
                 matchFrames = 0;
+                pitchCursor.style.setProperty('--charge', `0%`); // 換題時重置集氣條
+                pitchCursor.classList.remove('perfect');
                 
                 for (let i = 0; i < currentSequence.length; i++) {
                     let dot = document.getElementById(`dot-${i}`);
                     let wrapper = document.getElementById(`wrapper-${i}`);
                     if(dot) dot.classList.remove('active');
                     if(wrapper) wrapper.classList.remove('is-active');
-                    
-                    if (i < index && dot) {
-                        dot.classList.add('done'); 
-                    }
+                    if (i < index && dot) dot.classList.add('done'); 
                 }
                 
                 let targetDot = document.getElementById(`dot-${index}`);
@@ -698,15 +579,12 @@
                 playFullSequence(true); 
             });
 
-            playBtn.addEventListener('click', () => {
-                playFullSequence(false); 
-            });
+            playBtn.addEventListener('click', () => { playFullSequence(false); });
 
             startMicBtn.addEventListener('click', async () => {
                 try {
                     startMicBtn.textContent = '連線中...';
                     initAudio();
-                    // 【解除自動增益限制】：讓平板發揮原生的麥克風增強功能
                     const stream = await navigator.mediaDevices.getUserMedia({ 
                         audio: { echoCancellation: false, noiseSuppression: false } 
                     }); 
@@ -746,7 +624,6 @@
                 
                 volumeLevel.style.width = Math.min(100, rms * 100 * 5) + '%';
 
-                // 【放寬音量門檻】：只要有一點點聲音就啟動游標
                 if (rms > 0.0015) { 
                     pitchCursor.classList.add('active');
                     let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
@@ -762,38 +639,51 @@
 
                         let smoothedCentsDiff = (smoothedPosition - 50) * 1.5;
 
+                        // 【修改重點 2：集氣與漏氣機制】
                         if (Math.abs(smoothedCentsDiff) < CENTS_TOLERANCE) {
-                            matchFrames++;
-                            if (matchFrames > REQUIRED_FRAMES) {
-                                pitchCursor.classList.add('perfect');
-                                currentTargetIndex++;
-                                
-                                if (currentTargetIndex >= currentSequence.length) {
-                                    isSequenceComplete = true; 
-                                    document.getElementById(`dot-${currentTargetIndex-1}`).classList.add('done');
-                                    document.getElementById(`dot-${currentTargetIndex-1}`).classList.remove('active');
-                                    document.getElementById(`wrapper-${currentTargetIndex-1}`).classList.remove('is-active'); 
-                                    successOverlay.classList.add('show');
-                                } else {
-                                    isTransitioning = true; 
-                                    isListeningToUser = false; 
-                                    setTimeout(() => {
-                                        setTargetNote(currentTargetIndex);
-                                        pitchCursor.classList.remove('perfect');
-                                        isTransitioning = false; 
-                                        playTargetNoteForGameplay(currentTargetIndex);
-                                    }, 500);
-                                }
+                            matchFrames++; // 唱準了，增加能量
+                        } else {
+                            // 沒對準時，不會瞬間歸零，而是「快速漏氣」
+                            // 這樣可以包容輕微換氣，但講話絕對集不滿
+                            matchFrames = Math.max(0, matchFrames - 3); 
+                        }
+
+                        // 將累積的能量轉換為百分比，更新 CSS 讓游標注水
+                        let chargePercent = Math.min(100, (matchFrames / REQUIRED_FRAMES) * 100);
+                        pitchCursor.style.setProperty('--charge', `${chargePercent}%`);
+
+                        if (matchFrames >= REQUIRED_FRAMES) {
+                            pitchCursor.classList.add('perfect');
+                            currentTargetIndex++;
+                            
+                            if (currentTargetIndex >= currentSequence.length) {
+                                isSequenceComplete = true; 
+                                document.getElementById(`dot-${currentTargetIndex-1}`).classList.add('done');
+                                document.getElementById(`dot-${currentTargetIndex-1}`).classList.remove('active');
+                                document.getElementById(`wrapper-${currentTargetIndex-1}`).classList.remove('is-active'); 
+                                setTimeout(() => { successOverlay.classList.add('show'); }, 300); // 延遲一下讓學生看到游標集滿
+                            } else {
+                                isTransitioning = true; 
+                                isListeningToUser = false; 
+                                setTimeout(() => {
+                                    setTargetNote(currentTargetIndex);
+                                    pitchCursor.classList.remove('perfect');
+                                    isTransitioning = false; 
+                                    playTargetNoteForGameplay(currentTargetIndex);
+                                }, 500);
                             }
                         } else {
                             pitchCursor.classList.remove('perfect');
-                            matchFrames = 0;
                         }
                     }
                 } else {
+                    // 如果完全沒有聲音，游標滑回中間，且能量快速漏光
                     pitchCursor.classList.remove('active');
                     pitchCursor.classList.remove('perfect');
-                    matchFrames = 0;
+                    matchFrames = Math.max(0, matchFrames - 5);
+                    let chargePercent = Math.min(100, (matchFrames / REQUIRED_FRAMES) * 100);
+                    pitchCursor.style.setProperty('--charge', `${chargePercent}%`);
+                    
                     smoothedPosition = (smoothedPosition * 0.9) + (50 * 0.1);
                     pitchCursor.style.setProperty('--cursor-pos', `${smoothedPosition}%`);
                 }
@@ -815,13 +705,9 @@
                 for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
                 
                 let clarity = maxval / c[0];
-                // 【放寬純度門檻】：降到 0.5，允許更多氣音跟人聲摩擦音進入判定
-                if (clarity < 0.5) {
-                    return -1; 
-                }
+                if (clarity < 0.5) { return -1; }
 
                 let T0 = maxpos;
-
                 if (maxpos > 0 && maxpos < SIZE - 1) {
                     let y1 = c[maxpos - 1], y2 = c[maxpos], y3 = c[maxpos + 1];
                     let a = (y1 + y3 - 2 * y2) / 2;
