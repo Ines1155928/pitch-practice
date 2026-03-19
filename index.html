@@ -188,7 +188,7 @@
         .btn-start-game { background-color: #FFB74D; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #F57C00; transition: all 0.1s; }
         .btn-start-game:active { transform: translateY(8px); box-shadow: 0 0 0 #F57C00; }
 
-        .action-prompt { position: fixed; top: 140px; left: 50%; transform: translate(-50%, -20px); background-color: rgba(255, 82, 82, 0.95); color: white; padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; font-weight: 900; box-shadow: 0 10px 20px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; z-index: 1000; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .action-prompt { position: fixed; top: 140px; left: 50%; transform: translate(-50%, -20px); color: white; padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; font-weight: 900; box-shadow: 0 10px 20px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; z-index: 1000; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .action-prompt.show { opacity: 1; transform: translate(-50%, 0); }
 
         .success-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
@@ -251,7 +251,7 @@
         </div>
     </header>
 
-    <div id="action-prompt" class="action-prompt">🎤 換你了！請聽完音後開始哼唱</div>
+    <div id="action-prompt" class="action-prompt"></div>
 
     <main>
         <div class="sequence-container" id="sequence-display">
@@ -320,10 +320,11 @@
             let targetFreq = 261.63; 
             
             let matchFrames = 0; 
-            const REQUIRED_FRAMES = 35; // 需要穩定約 0.6 秒
-            const CENTS_TOLERANCE = 45; 
+            const REQUIRED_FRAMES = 35; 
+            const CENTS_TOLERANCE = 50; 
             let smoothedPosition = 50; 
-            let previousFreq = 0; // 新增：用來追蹤上一個瞬間的音頻
+            let previousFreq = 0; 
+            let promptTimeout; // 用來控制提示文字的時間
 
             const cMajorPitches = [0, 2, 4, 5, 7, 9, 11];
 
@@ -398,10 +399,18 @@
                 clickOsc.stop(startTime + 0.1); 
             }
 
-            function showActionPrompt(msg) {
+            // 【重點修改 1：動態換色的提示框系統】
+            function showActionPrompt(msg, duration = 2500, bgColor = "rgba(255, 82, 82, 0.95)") {
                 actionPrompt.textContent = msg;
+                actionPrompt.style.backgroundColor = bgColor;
                 actionPrompt.classList.add('show');
-                setTimeout(() => { actionPrompt.classList.remove('show'); }, 2500);
+                
+                clearTimeout(promptTimeout);
+                if (duration > 0) {
+                    promptTimeout = setTimeout(() => { 
+                        actionPrompt.classList.remove('show'); 
+                    }, duration);
+                }
             }
 
             function playTargetNoteForGameplay(index) {
@@ -417,10 +426,15 @@
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
 
+                // 播放單音時的藍色引導提示
+                showActionPrompt("👂 聽聽看，跟著一起哼唱～", 3000, "rgba(3, 169, 244, 0.95)");
+
                 let seqId = currentSequenceId;
                 setTimeout(() => {
                     if (dot) dot.classList.remove('demo-playing');
                     if (seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
+                        // 播放完畢，紅色提示開始挑戰
+                        showActionPrompt("🎤 換你了！將綠色能量集滿", 3000, "rgba(255, 82, 82, 0.95)");
                         isListeningToUser = true;
                     }
                 }, 3000);
@@ -448,12 +462,15 @@
 
                 let totalTime = currentSequence.length * (noteDuration + gapDuration) * 1000;
                 
+                // 整段播放時的紫色提示
+                let promptMsg = isInitialPlay ? "🎵 請先聽一次完整題目" : "🎵 重新聽一次全題";
+                showActionPrompt(promptMsg, totalTime, "rgba(156, 39, 176, 0.95)");
+                
                 setTimeout(() => {
                     let dots = document.querySelectorAll('.note-dot');
                     dots.forEach(d => d.classList.remove('demo-playing'));
 
                     if (isInitialPlay) {
-                        showActionPrompt("🎤 換你了！請聽完音後開始哼唱");
                         currentTargetIndex = 0;
                         setTargetNote(0);
                         playTargetNoteForGameplay(0);
@@ -471,7 +488,14 @@
                 isListeningToUser = false;
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
-                setTimeout(() => { isListeningToUser = previousState; }, 3000);
+                
+                // 點擊單音也給予藍色引導
+                showActionPrompt("👂 聽聽看，跟著一起哼唱～", 3000, "rgba(3, 169, 244, 0.95)");
+
+                setTimeout(() => { 
+                    isListeningToUser = previousState; 
+                    if (previousState) showActionPrompt("🎤 換你了！繼續挑戰", 2000, "rgba(255, 82, 82, 0.95)");
+                }, 3000);
             }
 
             function generateSequence() {
@@ -620,11 +644,9 @@
                     let currentFreq = autoCorrelate(buffer, audioContext.sampleRate);
                     
                     if (currentFreq !== -1) {
-                        // 【重點：判斷音高是否穩定】
                         let isPitchStable = true;
                         if (previousFreq > 0) {
                             let centsJump = Math.abs(1200 * Math.log2(currentFreq / previousFreq));
-                            // 如果連續兩個瞬間，音高跳動超過大半音(80音分)，代表是在講話
                             if (centsJump > 80) {
                                 isPitchStable = false;
                             }
@@ -641,15 +663,13 @@
 
                         let smoothedCentsDiff = (smoothedPosition - 50) * 1.5;
 
-                        // 只有在「音準正確」且「音高穩定（不是講話）」時，才給予能量
                         if (Math.abs(smoothedCentsDiff) < CENTS_TOLERANCE && isPitchStable) {
                             matchFrames++; 
                         } else {
-                            // 嚴厲懲罰機制：如果是講話或音準偏離太多，瞬間扣掉大量進度！
                             if (!isPitchStable || Math.abs(smoothedCentsDiff) > 100) {
-                                matchFrames = Math.max(0, matchFrames - 15); // 快速漏光
+                                matchFrames = Math.max(0, matchFrames - 15); 
                             } else {
-                                matchFrames = Math.max(0, matchFrames - 2);  // 稍微走音，緩慢漏氣
+                                matchFrames = Math.max(0, matchFrames - 2);  
                             }
                         }
 
@@ -681,11 +701,10 @@
                         }
                     }
                 } else {
-                    previousFreq = 0; // 沒聲音時重置頻率追蹤
+                    previousFreq = 0; 
                     pitchCursor.classList.remove('active');
                     pitchCursor.classList.remove('perfect');
                     
-                    // 沒聲音時，能量快速歸零
                     matchFrames = Math.max(0, matchFrames - 8);
                     let chargePercent = Math.min(100, (matchFrames / REQUIRED_FRAMES) * 100);
                     pitchCursor.style.setProperty('--charge', `${chargePercent}%`);
