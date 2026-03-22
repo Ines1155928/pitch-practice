@@ -8,19 +8,17 @@
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
 
         :root {
-            /* 協作平台專用的深色宇宙配色 */
             --text-color: #ECEFF1;     
             --accent-color: #4DB6AC;   
             --warning-color: #FFCA28;  
-            --panel-bg: rgba(10, 20, 35, 0.75); /* 深黑藍色半透明玻璃 */
-            --border-color: rgba(77, 182, 172, 0.5); /* 科技發光邊框 */
+            --panel-bg: rgba(10, 20, 35, 0.75); 
+            --border-color: rgba(77, 182, 172, 0.5); 
             --dot-color: #B0BEC5;      
             --active-dot-color: #FFF176; 
             --cursor-pos: 50%; 
             --charge: 0%; 
         }
 
-        /* 確保在 iframe 內高度 100% 正常顯示 */
         html, body {
             margin: 0;
             padding: 0;
@@ -35,7 +33,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden; 
-            /* 協作平台 iframe 友善的背景圖設定 */
             background-color: #0F2027;
             background-image: linear-gradient(rgba(10, 20, 35, 0.5), rgba(10, 20, 35, 0.8)), url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
@@ -50,7 +47,7 @@
             margin: 15px;
             background-color: var(--panel-bg);
             border-radius: 50px;
-            border: 2px solid var(--border-color); /* 改為科技細邊框 */
+            border: 2px solid var(--border-color); 
             box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 0 10px rgba(77, 182, 172, 0.2);
             flex-wrap: wrap; 
             gap: 15px;
@@ -68,14 +65,14 @@
             font-family: inherit; 
             border-radius: 20px; 
             border: 2px solid rgba(255, 255, 255, 0.3); 
-            background-color: rgba(255, 255, 255, 0.1); /* 輸入框變深色透明 */
+            background-color: rgba(255, 255, 255, 0.1); 
             color: #FFF; 
             cursor: pointer; 
             text-align: center; 
             transition: border-color 0.3s; 
         }
         select:focus, input[type="number"]:focus { outline: none; border-color: var(--warning-color); }
-        select option { color: #000; } /* 點開下拉選單時保持黑字，避免看不見 */
+        select option { color: #000; } 
         
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"] { width: 60px; -moz-appearance: textfield; }
@@ -380,6 +377,7 @@
             let isTransitioning = false; 
             let isListeningToUser = false; 
             let currentSequenceId = 0; 
+            let playbackInterruptToken = 0; // 【新增】：防干擾令牌，確保麥克風在播放時絕對關閉
             
             let currentSequence = []; 
             let currentTargetIndex = 0; 
@@ -478,6 +476,7 @@
                 }
             }
 
+            // 【核心修正】：發出聲音時產生新令牌，並強制關閉麥克風
             function playTargetNoteForGameplay(index) {
                 let midi = currentSequence[index];
                 if (!midi) return;
@@ -488,6 +487,9 @@
                 if (audioContext.state === 'suspended') audioContext.resume();
 
                 isListeningToUser = false; 
+                playbackInterruptToken++; // 產生新令牌
+                let currentToken = playbackInterruptToken;
+
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
 
@@ -496,7 +498,8 @@
                 let seqId = currentSequenceId;
                 setTimeout(() => {
                     if (dot) dot.classList.remove('demo-playing');
-                    if (seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
+                    // 只有當「沒有被新聲音打斷」時，才允許開啟麥克風
+                    if (currentToken === playbackInterruptToken && seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
                         showActionPrompt("🚀 換你了！請持續哼唱注入燃料！", 3000, "rgba(255, 152, 0, 0.95)");
                         isListeningToUser = true;
                     }
@@ -508,6 +511,9 @@
                 if (audioContext.state === 'suspended') audioContext.resume();
                 
                 isListeningToUser = false; 
+                playbackInterruptToken++; // 產生新令牌
+                let currentToken = playbackInterruptToken;
+
                 let startTime = audioContext.currentTime;
                 const noteDuration = 1.0; 
                 const gapDuration = 0.3;  
@@ -517,6 +523,7 @@
                     playXylophoneTone(midiToFreq(midi), playTime, noteDuration);
 
                     setTimeout(() => {
+                        if (currentToken !== playbackInterruptToken) return; // 如果被打斷，停止視覺動畫
                         let dots = document.querySelectorAll('.note-dot');
                         dots.forEach(d => d.classList.remove('demo-playing'));
                         if(dots[index]) dots[index].classList.add('demo-playing');
@@ -529,6 +536,8 @@
                 showActionPrompt(promptMsg, totalTime, "rgba(156, 39, 176, 0.95)");
                 
                 setTimeout(() => {
+                    if (currentToken !== playbackInterruptToken) return; // 被打斷就不執行後續
+                    
                     let dots = document.querySelectorAll('.note-dot');
                     dots.forEach(d => d.classList.remove('demo-playing'));
 
@@ -546,16 +555,22 @@
             function playSingleNote(midi) {
                 initAudio();
                 if (audioContext.state === 'suspended') audioContext.resume();
-                let previousState = isListeningToUser;
+                
                 isListeningToUser = false;
+                playbackInterruptToken++; // 產生新令牌
+                let currentToken = playbackInterruptToken;
+
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
                 
                 showActionPrompt("👂 總部發送定位中，請聆聽...", 3000, "rgba(3, 169, 244, 0.95)");
 
                 setTimeout(() => { 
-                    isListeningToUser = previousState; 
-                    if (previousState) showActionPrompt("🚀 換你了！繼續注入燃料", 2000, "rgba(255, 152, 0, 0.95)");
+                    // 只有沒被其他聲音打斷，才把麥克風還給玩家
+                    if (currentToken === playbackInterruptToken && !isSequenceComplete) {
+                        isListeningToUser = true; 
+                        showActionPrompt("🚀 換你了！繼續注入燃料", 2000, "rgba(255, 152, 0, 0.95)");
+                    }
                 }, 3000);
             }
 
@@ -689,7 +704,13 @@
             function updatePitch() {
                 requestAnimationFrame(updatePitch);
 
+                // 【核心修正】：如果不是使用者的回合，強制清空視覺並返回，麥克風視同聾子！
                 if (!isDetecting || isSequenceComplete || isTransitioning || !isListeningToUser) {
+                    pitchCursor.classList.remove('active', 'perfect');
+                    matchFrames = 0;
+                    pitchCursor.style.setProperty('--charge', `0%`);
+                    smoothedPosition = (smoothedPosition * 0.9) + (50 * 0.1);
+                    pitchCursor.style.setProperty('--cursor-pos', `${smoothedPosition}%`);
                     return;
                 }
 
