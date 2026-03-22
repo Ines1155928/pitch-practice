@@ -3,35 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動式音準練習 - 童趣闖關版</title>
+    <title>🚀 太空救援小隊 - 音準大冒險</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
 
         :root {
-            --bg-color: #E0F7FA;       
-            --text-color: #5D4037;     
+            /* 協作平台專用的深色宇宙配色 */
+            --text-color: #ECEFF1;     
             --accent-color: #4DB6AC;   
-            --warning-color: #FF8A65;  
-            --panel-bg: #FFFFFF;       
-            --border-color: #FFF59D;   
-            --dot-color: #E0E0E0;      
+            --warning-color: #FFCA28;  
+            --panel-bg: rgba(10, 20, 35, 0.75); /* 深黑藍色半透明玻璃 */
+            --border-color: rgba(77, 182, 172, 0.5); /* 科技發光邊框 */
+            --dot-color: #B0BEC5;      
             --active-dot-color: #FFF176; 
             --cursor-pos: 50%; 
             --charge: 0%; 
         }
 
-        body {
+        /* 確保在 iframe 內高度 100% 正常顯示 */
+        html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
             font-family: 'Nunito', 'Helvetica Neue', Arial, sans-serif;
             font-weight: 700;
-            background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            height: 100dvh; 
             overflow: hidden; 
+            /* 協作平台 iframe 友善的背景圖設定 */
+            background-color: #0F2027;
+            background-image: linear-gradient(rgba(10, 20, 35, 0.5), rgba(10, 20, 35, 0.8)), url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
         }
 
         header {
@@ -42,28 +50,45 @@
             margin: 15px;
             background-color: var(--panel-bg);
             border-radius: 50px;
-            border: 6px solid var(--border-color);
-            box-shadow: 0 8px 0 rgba(0,0,0,0.05);
+            border: 2px solid var(--border-color); /* 改為科技細邊框 */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 0 10px rgba(77, 182, 172, 0.2);
             flex-wrap: wrap; 
             gap: 15px;
             z-index: 100; 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
-        .header-group { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; color: #795548; }
-        select, input[type="number"] { padding: 8px 12px; font-size: 1.1rem; font-weight: 700; font-family: inherit; border-radius: 20px; border: 3px solid #E0E0E0; background-color: #FAFAFA; color: var(--text-color); cursor: pointer; text-align: center; transition: border-color 0.3s; }
+        .header-group { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; color: #FFF; }
+        
+        select, input[type="number"] { 
+            padding: 8px 12px; 
+            font-size: 1.1rem; 
+            font-weight: 700; 
+            font-family: inherit; 
+            border-radius: 20px; 
+            border: 2px solid rgba(255, 255, 255, 0.3); 
+            background-color: rgba(255, 255, 255, 0.1); /* 輸入框變深色透明 */
+            color: #FFF; 
+            cursor: pointer; 
+            text-align: center; 
+            transition: border-color 0.3s; 
+        }
         select:focus, input[type="number"]:focus { outline: none; border-color: var(--warning-color); }
+        select option { color: #000; } /* 點開下拉選單時保持黑字，避免看不見 */
+        
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"] { width: 60px; -moz-appearance: textfield; }
         input[type="range"] { width: 90px; cursor: pointer; accent-color: var(--warning-color); }
 
-        .mic-status-container { display: flex; align-items: center; background-color: #F5F5F5; padding: 6px 12px; border-radius: 30px; border: 3px solid #EEEEEE; }
-        .btn-start-mic { background-color: #FF5252; color: white; border: none; padding: 10px 18px; border-radius: 30px; font-weight: 900; cursor: pointer; font-size: 1.1rem; font-family: inherit; box-shadow: 0 5px 0 #D32F2F; transition: all 0.1s; }
-        .btn-start-mic:active { transform: translateY(5px); box-shadow: 0 0 0 #D32F2F; }
+        .mic-status-container { display: flex; align-items: center; background-color: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-start-mic { background-color: #FF5252; color: white; border: none; padding: 10px 18px; border-radius: 30px; font-weight: 900; cursor: pointer; font-size: 1.1rem; font-family: inherit; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.6); transition: all 0.1s; }
+        .btn-start-mic:active { transform: translateY(3px); box-shadow: 0 0 0 #D32F2F; }
 
-        .mic-active-ui { display: none; align-items: center; gap: 8px; font-size: 1rem; color: #757575; font-weight: 900; }
-        .mic-icon-green { width: 14px; height: 14px; background-color: var(--accent-color); border-radius: 50%; box-shadow: 0 0 8px var(--accent-color); }
-        .volume-bar-container { width: 60px; height: 12px; background-color: #E0E0E0; border-radius: 6px; overflow: hidden; }
-        .volume-bar-fill { height: 100%; width: 0%; background-color: var(--accent-color); transition: width 0.05s ease-out; border-radius: 6px; }
+        .mic-active-ui { display: none; align-items: center; gap: 8px; font-size: 1rem; color: #FFF; font-weight: 900; }
+        .mic-icon-green { width: 14px; height: 14px; background-color: #66BB6A; border-radius: 50%; box-shadow: 0 0 10px #66BB6A; }
+        .volume-bar-container { width: 60px; height: 12px; background-color: rgba(255,255,255,0.2); border-radius: 6px; overflow: hidden; }
+        .volume-bar-fill { height: 100%; width: 0%; background-color: #66BB6A; transition: width 0.05s ease-out; border-radius: 6px; }
 
         main {
             flex: 1;
@@ -82,59 +107,69 @@
             height: 320px;
             background-color: var(--panel-bg);
             border-radius: 40px;
-            border: 8px solid var(--border-color);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border: 2px solid var(--border-color);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(77, 182, 172, 0.1);
             display: flex;
             justify-content: space-around;
             align-items: flex-end;
             padding: 20px 10px;
             box-sizing: border-box;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
-        .grid-line { position: absolute; width: 90%; left: 5%; height: 3px; background-color: #F5F5F5; border-radius: 2px; z-index: 0; }
+        .grid-line { position: absolute; width: 90%; left: 5%; height: 2px; background-color: rgba(255, 255, 255, 0.15); border-radius: 2px; z-index: 0; }
         .note-dot-wrapper { position: relative; width: 75px; height: 100%; z-index: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
         
-        /* 【修改重點】：箭頭移到下方，改成往上彈跳 */
-        .arrow-indicator { 
-            position: absolute; 
-            bottom: -80px; /* 移到圓圈下方 */
-            font-size: 2.5rem; 
-            opacity: 0; 
-            pointer-events: none; 
-            transition: opacity 0.3s; 
-            animation: bounce-up 1s infinite; 
-            z-index: 5; 
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); 
-        }
+        .arrow-indicator { position: absolute; bottom: -70px; font-size: 2.5rem; opacity: 0; pointer-events: none; transition: opacity 0.3s; animation: bounce-up 1s infinite; z-index: 5; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
         .note-dot-wrapper.is-active .arrow-indicator { opacity: 1; }
 
-        @keyframes bounce-up { 
-            0%, 100% { transform: translateY(0); } 
-            50% { transform: translateY(-10px); } /* 往上彈跳指向圓圈 */
-        }
+        @keyframes bounce-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 
         .note-dot {
             position: absolute;
             width: 75px;
             height: 75px;
-            background-color: var(--panel-bg);
-            border: 5px solid var(--dot-color);
+            background: radial-gradient(circle at 30% 30%, #ECEFF1, #90A4AE);
+            border: 4px solid #CFD8DC;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             font-size: 1.5rem;
             font-weight: 900;
-            color: #BDBDBD;
+            color: #37474F;
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform: translateY(50%); 
             cursor: pointer; 
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.3), 0 5px 15px rgba(0,0,0,0.5);
         }
 
         .note-dot:active { transform: translateY(50%) scale(0.85); }
-        .note-dot.active { background-color: var(--active-dot-color); border-color: #FBC02D; color: #5D4037; transform: translateY(50%) scale(1.15); box-shadow: 0 8px 15px rgba(255, 235, 59, 0.4); }
-        .note-dot.done { background-color: var(--accent-color); border-color: #00897B; color: #FFF; transform: translateY(50%) scale(1); }
-        .note-dot.demo-playing { background-color: #81D4FA !important; border-color: #039BE5 !important; transform: translateY(50%) scale(1.15) !important; color: #FFF !important; box-shadow: 0 5px 15px rgba(3, 155, 229, 0.5) !important; }
+        
+        .note-dot.active { 
+            background: radial-gradient(circle at 30% 30%, #FFF9C4, #FBC02D);
+            border-color: #F57F17; 
+            color: #4E342E; 
+            transform: translateY(50%) scale(1.15); 
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2), 0 0 25px rgba(253, 216, 53, 0.8); 
+        }
+        
+        .note-dot.done { 
+            background: radial-gradient(circle at 30% 30%, #B2DFDB, #00897B);
+            border-color: #00695C; 
+            color: #FFF; 
+            transform: translateY(50%) scale(1); 
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.3), 0 0 15px rgba(0, 137, 123, 0.6);
+        }
+        
+        .note-dot.demo-playing { 
+            background: radial-gradient(circle at 30% 30%, #B3E5FC, #039BE5) !important;
+            border-color: #0277BD !important; 
+            transform: translateY(50%) scale(1.15) !important; 
+            color: #FFF !important; 
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2), 0 0 25px rgba(3, 155, 229, 0.9) !important; 
+        }
 
         .pitch-visualizer {
             position: relative;
@@ -142,37 +177,43 @@
             height: 320px;
             background-color: var(--panel-bg);
             border-radius: 40px;
-            border: 8px solid var(--border-color);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border: 2px solid var(--border-color);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
             display: flex;
             justify-content: center;
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
         }
 
         .target-line {
             position: absolute;
             top: 50%;
             width: 110px; 
-            height: 6px;
+            height: 4px;
             background-color: #FFCDD2; 
             transform: translateY(-50%);
-            border-radius: 3px;
+            border-radius: 2px;
             z-index: 2;
+            box-shadow: 0 0 8px rgba(255, 205, 210, 0.8);
         }
 
         .user-pitch-cursor {
             position: absolute;
             bottom: var(--cursor-pos); 
-            width: 50px;
-            height: 50px;
-            background-color: var(--warning-color);
+            width: 55px;
+            height: 55px;
+            background-color: #ECEFF1;
             border-radius: 50%;
             transform: translateY(50%); 
             transition: bottom 0.1s linear, left 0.1s linear;
-            box-shadow: 0 5px 15px rgba(255, 138, 101, 0.5);
-            opacity: 0.3; 
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            opacity: 0.4; 
             z-index: 3;
             border: 4px solid #FFF;
             overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .user-pitch-cursor::before {
@@ -180,54 +221,65 @@
             position: absolute;
             bottom: 0; left: 0; width: 100%;
             height: var(--charge); 
-            background-color: var(--accent-color);
+            background-color: var(--warning-color);
             transition: height 0.1s linear;
-            z-index: -1;
+            z-index: 1;
+        }
+
+        .user-pitch-cursor::after {
+            content: '🚀';
+            position: absolute;
+            font-size: 1.8rem;
+            z-index: 2;
+            transform: rotate(-45deg); 
         }
 
         .user-pitch-cursor.active { opacity: 1; }
         .user-pitch-cursor.perfect { 
-            background-color: var(--accent-color); 
-            box-shadow: 0 5px 20px rgba(77, 182, 172, 0.6); 
+            background-color: var(--warning-color); 
+            box-shadow: 0 0 30px rgba(255, 202, 40, 1); 
             transform: translateY(50%) scale(1.2); 
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .intro-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(224, 247, 250, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .intro-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 20, 35, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
         .intro-overlay.show { opacity: 1; pointer-events: all; }
-        .intro-card { background-color: white; padding: 35px 40px; border-radius: 40px; border: 6px solid var(--border-color); box-shadow: 0 15px 30px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 450px; transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .intro-card { background-color: var(--panel-bg); padding: 35px 40px; border-radius: 30px; border: 2px solid var(--border-color); box-shadow: 0 20px 50px rgba(0,0,0,0.8); text-align: center; width: 80%; max-width: 480px; transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .intro-overlay.show .intro-card { transform: scale(1); }
-        .intro-card h2 { font-size: 2.2rem; color: var(--text-color); margin-top: 0; margin-bottom: 15px; line-height: 1.4; }
-        .intro-card p { font-size: 1.2rem; color: #795548; margin-bottom: 30px; line-height: 1.6; }
-        .btn-start-game { background-color: #FFB74D; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #F57C00; transition: all 0.1s; }
-        .btn-start-game:active { transform: translateY(8px); box-shadow: 0 0 0 #F57C00; }
+        .intro-card h2 { font-size: 2.2rem; color: #FFF; margin-top: 0; margin-bottom: 15px; line-height: 1.4; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .intro-card p { font-size: 1.2rem; color: #CFD8DC; margin-bottom: 30px; line-height: 1.6; }
+        .btn-start-game { background-color: #FF9800; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 6px 15px rgba(230, 81, 0, 0.6); transition: all 0.1s; }
+        .btn-start-game:active { transform: translateY(5px); box-shadow: 0 0 0 transparent; }
 
-        .action-prompt { position: fixed; top: 140px; left: 50%; transform: translate(-50%, -20px); color: white; padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; font-weight: 900; box-shadow: 0 10px 20px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; z-index: 1000; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .action-prompt { position: fixed; top: 120px; left: 50%; transform: translate(-50%, -20px); color: white; padding: 12px 30px; border-radius: 30px; font-size: 1.5rem; font-weight: 900; box-shadow: 0 10px 25px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; z-index: 1000; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 2px solid rgba(255,255,255,0.4); }
         .action-prompt.show { opacity: 1; transform: translate(-50%, 0); }
 
-        .success-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+        .success-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 20, 35, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.4s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);}
         .success-overlay.show { opacity: 1; pointer-events: all; }
-        .success-overlay h1 { font-size: 5rem; color: #FF5252; text-shadow: 0 5px 0 #D32F2F; margin-bottom: 40px; transform: scale(0.5); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .success-overlay h1 { font-size: 4.5rem; color: #FFCA28; text-shadow: 0 0 30px rgba(255, 202, 40, 0.8); margin-bottom: 40px; transform: scale(0.5); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .success-overlay.show h1 { transform: scale(1) rotate(-5deg); }
 
         footer { padding: 15px; display: flex; justify-content: center; gap: 20px; z-index: 10; margin-bottom: 10px; }
-        .btn-play, .btn-massive { background-color: #29B6F6; color: white; padding: 15px 40px; font-size: 1.5rem; font-weight: 900; font-family: inherit; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 0 #0288D1; transition: all 0.1s; }
-        .btn-play:active, .btn-massive:active { transform: translateY(8px); box-shadow: 0 0 0 #0288D1; }
-        .btn-massive { background-color: #66BB6A; box-shadow: 0 8px 0 #388E3C; font-size: 2rem; padding: 20px 60px; }
-        .btn-massive:active { box-shadow: 0 0 0 #388E3C; }
+        .btn-play { background-color: rgba(255, 255, 255, 0.15); color: #FFF; border: 2px solid rgba(255,255,255,0.4); padding: 12px 35px; font-size: 1.2rem; font-weight: 900; font-family: inherit; border-radius: 50px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(5px); }
+        .btn-play:hover { background-color: rgba(255, 255, 255, 0.25); }
+        .btn-play:active { transform: translateY(4px); }
+        
+        .btn-massive { background-color: #4DB6AC; box-shadow: 0 6px 15px rgba(0, 105, 92, 0.6); color: white; font-size: 2rem; padding: 20px 60px; font-family: inherit; font-weight: 900; border: none; border-radius: 50px; cursor: pointer; transition: all 0.1s; }
+        .btn-massive:active { transform: translateY(6px); box-shadow: 0 0 0 transparent; }
 
         @media (max-width: 820px) {
             main { flex-direction: column; gap: 30px; }
-            .sequence-container { width: 90%; height: 250px; margin-bottom: 30px; } /* 手機版多留一點底部空間給箭頭 */
+            .sequence-container { width: 90%; height: 250px; margin-bottom: 30px; } 
             .pitch-visualizer { width: 90%; height: 60px; flex-direction: column; align-items: center; }
             .target-line { top: 0; left: 50%; width: 6px; height: 80px; transform: translateX(-50%); }
             .user-pitch-cursor { bottom: 0; left: var(--cursor-pos); transform: translateX(-50%); }
             .user-pitch-cursor.perfect { transform: translateX(-50%) scale(1.2); }
-            .success-overlay h1 { font-size: 3.5rem; }
+            .success-overlay h1 { font-size: 3rem; }
             .intro-card h2 { font-size: 1.6rem; }
             .intro-card p { font-size: 1rem; }
             .btn-start-game { font-size: 1.2rem; padding: 12px 30px; }
-            .action-prompt { font-size: 1.2rem; padding: 8px 20px; top: 180px; } 
+            .action-prompt { font-size: 1.2rem; padding: 10px 25px; top: 160px; } 
+            header { padding: 10px; margin: 10px; }
         }
     </style>
 </head>
@@ -235,15 +287,15 @@
 
     <header>
         <div class="header-group">
-            <label>範圍：</label>
+            <label>星系：</label>
             <select id="min-note"></select><span>-</span><select id="max-note"></select>
         </div>
         <div class="header-group">
-            <label>出題數：</label>
+            <label>救援數：</label>
             <select id="note-count">
-                <option value="1">1 個音</option>
-                <option value="2">2 個音</option>
-                <option value="3" selected>3 個音</option>
+                <option value="1">1 顆星球</option>
+                <option value="2">2 顆星球</option>
+                <option value="3" selected>3 顆星球</option>
             </select>
         </div>
         <div class="header-group">
@@ -256,7 +308,7 @@
         </div>
         
         <div class="mic-status-container">
-            <button id="start-mic-btn" class="btn-start-mic">🎙️ 開啟麥克風</button>
+            <button id="start-mic-btn" class="btn-start-mic">🎙️ 開啟雷達</button>
             <div id="mic-active-ui" class="mic-active-ui">
                 <span class="mic-icon-green"></span>
                 <span>收音中</span>
@@ -281,20 +333,20 @@
 
         <div class="intro-overlay" id="intro-overlay">
             <div class="intro-card">
-                <h2>準備好了嗎？<br>這題共有 <span id="intro-count" style="color: #FF5252; font-size: 2.8rem;">3</span> 個音！</h2>
-                <p>請先聽聽看題目示範音，<br>接著再跟著箭頭一個個哼唱，<br>將游標裡的綠色能量集滿即可過關喔！</p>
-                <button class="btn-start-game" id="btn-start-game">開始聽題 🎵</button>
+                <h2>🚀 呼叫太空救援隊！<br>前方發現 <span id="intro-count" style="color: #FFCA28; font-size: 2.8rem;">3</span> 顆失去能量的星球</h2>
+                <p>請先接收總部的「示範音頻」定位，<br>接著跟著下方指示 (☝️)，<br>用平穩的歌聲為火箭注入燃料飛過去吧！</p>
+                <button class="btn-start-game" id="btn-start-game">發送定位音頻 🎵</button>
             </div>
         </div>
 
         <div class="success-overlay" id="success-overlay">
-            <h1>🎉 太棒了！🎉</h1>
-            <button class="btn-massive" id="next-seq-btn">挑戰下一題 ➔</button>
+            <h1>🛸 成功點亮星系！🎉</h1>
+            <button class="btn-massive" id="next-seq-btn">飛向下一片星系 ➔</button>
         </div>
     </main>
 
     <footer>
-        <button class="btn-play" id="play-btn">🎵 重新聽一次全題</button>
+        <button class="btn-play" id="play-btn">🎵 重新接收任務音頻</button>
     </footer>
 
     <script>
@@ -439,13 +491,13 @@
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
 
-                showActionPrompt("👂 聽聽看，跟著一起哼唱～", 3000, "rgba(3, 169, 244, 0.95)");
+                showActionPrompt("👂 總部發送定位中，請聆聽...", 3000, "rgba(3, 169, 244, 0.95)");
 
                 let seqId = currentSequenceId;
                 setTimeout(() => {
                     if (dot) dot.classList.remove('demo-playing');
                     if (seqId === currentSequenceId && currentTargetIndex === index && !isSequenceComplete) {
-                        showActionPrompt("🎤 換你了！將綠色能量集滿", 3000, "rgba(255, 82, 82, 0.95)");
+                        showActionPrompt("🚀 換你了！請持續哼唱注入燃料！", 3000, "rgba(255, 152, 0, 0.95)");
                         isListeningToUser = true;
                     }
                 }, 3000);
@@ -473,7 +525,7 @@
 
                 let totalTime = currentSequence.length * (noteDuration + gapDuration) * 1000;
                 
-                let promptMsg = isInitialPlay ? "🎵 請先聽一次完整題目" : "🎵 重新聽一次全題";
+                let promptMsg = isInitialPlay ? "🎵 請先聽一次全區星系定位" : "🎵 重新接收全區定位音頻";
                 showActionPrompt(promptMsg, totalTime, "rgba(156, 39, 176, 0.95)");
                 
                 setTimeout(() => {
@@ -499,11 +551,11 @@
                 const now = audioContext.currentTime;
                 playXylophoneTone(midiToFreq(midi), now, 3.0); 
                 
-                showActionPrompt("👂 聽聽看，跟著一起哼唱～", 3000, "rgba(3, 169, 244, 0.95)");
+                showActionPrompt("👂 總部發送定位中，請聆聽...", 3000, "rgba(3, 169, 244, 0.95)");
 
                 setTimeout(() => { 
                     isListeningToUser = previousState; 
-                    if (previousState) showActionPrompt("🎤 換你了！繼續挑戰", 2000, "rgba(255, 82, 82, 0.95)");
+                    if (previousState) showActionPrompt("🚀 換你了！繼續注入燃料", 2000, "rgba(255, 152, 0, 0.95)");
                 }, 3000);
             }
 
@@ -543,7 +595,6 @@
                     wrapper.className = 'note-dot-wrapper';
                     wrapper.id = `wrapper-${i}`;
                     
-                    // 【修改重點】：把小手指圖案改成往上指的，放在圓圈下方
                     let arrow = document.createElement('div');
                     arrow.className = 'arrow-indicator';
                     arrow.textContent = '☝️'; 
@@ -608,7 +659,7 @@
 
             startMicBtn.addEventListener('click', async () => {
                 try {
-                    startMicBtn.textContent = '連線中...';
+                    startMicBtn.textContent = '雷達連線中...';
                     initAudio();
                     const stream = await navigator.mediaDevices.getUserMedia({ 
                         audio: { echoCancellation: false, noiseSuppression: false } 
@@ -629,7 +680,7 @@
                 } catch (err) {
                     console.error("麥克風錯誤:", err);
                     alert('無法開啟麥克風。請確認瀏覽器已允許麥克風權限。');
-                    startMicBtn.textContent = '🎙️ 開啟麥克風'; 
+                    startMicBtn.textContent = '🎙️ 開啟雷達'; 
                 }
             });
 
